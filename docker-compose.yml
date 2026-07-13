@@ -1,0 +1,15 @@
+services:
+  benefito-db:
+    image: pgvector/pgvector:pg16
+    container_name: benefito-db
+    environment:
+      POSTGRES_DB: benefito
+      POSTGRES_USER: benefito
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

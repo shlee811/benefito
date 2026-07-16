@@ -1,6 +1,7 @@
 package com.lion.benefito.domain.posting.entity;
 
-import com.lion.benefito.domain.posting.PostingException;
+import com.lion.benefito.domain.posting.exception.PostingErrorCode;
+import com.lion.benefito.domain.posting.exception.PostingException;
 import org.springframework.data.domain.Sort;
 
 public enum PostingSort {
@@ -26,7 +27,7 @@ public enum PostingSort {
         try {
             return PostingSort.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new PostingException("유효하지 않은 sort 값입니다: " + value);
+            throw new PostingException(PostingErrorCode.INVALID_POSTING_SORT);
         }
     }
 }

@@ -1,8 +1,14 @@
 package com.lion.benefito.global.exception;
 
+import com.lion.benefito.global.common.code.BaseErrorCode;
+import lombok.Getter;
+
+@Getter
 public class CustomException extends RuntimeException {
 
-    public CustomException(String message) {
-        super(message);
+    private final BaseErrorCode Code;
+
+    public CustomException(BaseErrorCode code) {
+        this.Code = code;
     }
 }

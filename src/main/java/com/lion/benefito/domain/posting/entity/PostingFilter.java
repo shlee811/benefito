@@ -1,6 +1,7 @@
 package com.lion.benefito.domain.posting.entity;
 
-import com.lion.benefito.domain.posting.PostingException;
+import com.lion.benefito.domain.posting.exception.PostingErrorCode;
+import com.lion.benefito.domain.posting.exception.PostingException;
 
 public enum PostingFilter {
 
@@ -15,7 +16,7 @@ public enum PostingFilter {
         try {
             return PostingFilter.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new PostingException("유효하지 않은 filter 값입니다: " + value);
+            throw new PostingException(PostingErrorCode.INVALID_POSTING_FILTER);
         }
     }
 }

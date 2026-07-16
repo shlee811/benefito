@@ -1,6 +1,7 @@
 package com.lion.benefito.domain.posting.service;
 
-import com.lion.benefito.domain.posting.PostingNotFoundException;
+import com.lion.benefito.domain.posting.exception.PostingErrorCode;
+import com.lion.benefito.domain.posting.exception.PostingException;
 import com.lion.benefito.domain.posting.dto.CalendarDeadlineCountResponse;
 import com.lion.benefito.domain.posting.dto.PostingDetailResponse;
 import com.lion.benefito.domain.posting.dto.PostingListResponse;
@@ -32,7 +33,7 @@ public class PostingService {
 
     public PostingDetailResponse getPosting(Long postingId) {
         Posting posting = postingRepository.findById(postingId)
-                .orElseThrow(() -> new PostingNotFoundException("존재하지 않는 공고입니다: " + postingId));
+                .orElseThrow(() -> new PostingException(PostingErrorCode.POSTING_NOT_FOUND));
         return PostingDetailResponse.from(posting);
     }
 
@@ -53,7 +54,7 @@ public class PostingService {
     public void increaseViewCount(Long postingId) {
         int updatedCount = postingRepository.incrementViewCount(postingId);
         if (updatedCount == 0) {
-            throw new PostingNotFoundException("존재하지 않는 공고입니다: " + postingId);
+            throw new PostingException(PostingErrorCode.POSTING_NOT_FOUND);
         }
     }
 }

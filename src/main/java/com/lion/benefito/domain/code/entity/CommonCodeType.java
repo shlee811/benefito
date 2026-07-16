@@ -1,6 +1,7 @@
 package com.lion.benefito.domain.code.entity;
 
-import com.lion.benefito.domain.code.CodeException;
+import com.lion.benefito.domain.code.exception.CodeErrorCode;
+import com.lion.benefito.domain.code.exception.CodeException;
 
 public enum CommonCodeType {
     CATEGORY,
@@ -9,12 +10,12 @@ public enum CommonCodeType {
 
     public static CommonCodeType from(String type) {
         if (type == null) {
-            throw new CodeException("codeType은 필수입니다.");
+            throw new CodeException(CodeErrorCode.INVALID_CODE_TYPE);
         }
         try {
             return CommonCodeType.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new CodeException("유효하지 않은 codeType 입니다: " + type);
+            throw new CodeException(CodeErrorCode.INVALID_CODE_TYPE);
         }
     }
 }

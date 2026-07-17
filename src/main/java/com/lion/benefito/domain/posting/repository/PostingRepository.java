@@ -29,4 +29,10 @@ public interface PostingRepository extends JpaRepository<Posting, Long>, JpaSpec
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Posting p SET p.viewCount = p.viewCount + 1 WHERE p.id = :postingId")
     int incrementViewCount(@Param("postingId") Long postingId);
+
+    List<Posting> findByEmbeddingIsNull();
+
+    @Modifying(clearAutomatically = true)
+    @Query(value = "UPDATE postings SET embedding = CAST(:embedding AS vector) WHERE id = :postingId", nativeQuery = true)
+    int updateEmbedding(@Param("postingId") Long postingId, @Param("embedding") String embedding);
 }

@@ -1,9 +1,9 @@
-package com.lion.benefito.global.exception.handler;
+package com.lion.benefito.global.common.exception.handler;
 
 import com.lion.benefito.global.common.CustomResponse;
 import com.lion.benefito.global.common.code.BaseErrorCode;
 import com.lion.benefito.global.common.code.GeneralErrorCode;
-import com.lion.benefito.global.exception.CustomException;
+import com.lion.benefito.global.common.exception.CustomException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;

@@ -1,4 +1,4 @@
-package com.lion.benefito.global.exception;
+package com.lion.benefito.global.common.exception;
 
 import com.lion.benefito.global.common.code.BaseErrorCode;
 import lombok.Getter;

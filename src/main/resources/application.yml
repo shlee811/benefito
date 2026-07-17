@@ -1,30 +1,37 @@
 spring:
   application:
-    name: benefito-backend # 애플리케이션의 이름 지정
+    name: benefito-backend
+
+  config:
+    import: optional:file:.env[.properties]
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:benefito} # 데이터베이스 연결 URL (호스트/포트/DB명 설정 및 기본값 제공)
-    username: ${DB_USERNAME:benefito} # 데이터베이스 접속용 사용자 계정 이름
-    password: ${DB_PASSWORD:benefito123!} # 데이터베이스 접속용 사용자 비밀번호
-    driver-class-name: org.postgresql.Driver # 데이터베이스 연결을 위한 JDBC 드라이버 지정
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:benefito}
+    username: ${DB_USERNAME:benefito}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update # 애플리케이션 실행 시 DB 스키마의 상태 설정
-    show-sql: true # 실행된 SQL 쿼리를 콘솔에 출력할지 여부
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
-        format_sql: true # 출력되는 SQL 쿼리를 보기 좋게 포맷팅
-        default_batch_fetch_size: 100 # JPA 연관 엔티티 벌크 조회 크기 설정 (N+1 문제 최적화)
-
-  logging:
-    level:
-      org.hibernate.SQL: debug # 실행되는 SQL 쿼리 로그 출력 지정
-      org.hibernate.orm.jdbc.bind: trace # SQL 쿼리에 입력되는 바인딩 파라미터 값 로그 출력 지정
+        format_sql: true
+        default_batch_fetch_size: 100
 
 springdoc:
   api-docs:
-    path: /api-docs # Swagger OpenAPI 스펙 문서 생성 경로
-
+    path: /api-docs
   swagger-ui:
-    path: /swagger-ui.html # Swagger UI 웹 페이지 접속 경로
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace
+
+openai:
+  base-url: https://api.openai.com
+  api-key: ${OPENAI_API_KEY}
+  embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}

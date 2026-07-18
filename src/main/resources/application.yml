@@ -20,6 +20,12 @@ spring:
         format_sql: true
         default_batch_fetch_size: 100
 
+  jwt:
+    secret: ${JWT_SECRET_KEY}
+    token:
+      access-expiration-time: ${JWT_ACCESS_EXPIRATION}
+      refresh-expiration-time: ${JWT_REFRESH_EXPIRATION}
+
 springdoc:
   api-docs:
     path: /api-docs

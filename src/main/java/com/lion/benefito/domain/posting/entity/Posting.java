@@ -58,4 +58,8 @@ public class Posting extends BaseTimeEntity {
 
     @Column(nullable = false)
     private long viewCount;
+
+    // title/content 기반 임베딩 벡터. PostingRepository.updateEmbedding() 벌크 쿼리로만 갱신한다(viewCount와 동일한 방식).
+    @Column(columnDefinition = "vector(1536)")
+    private String embedding;
 }

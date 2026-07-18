@@ -10,11 +10,15 @@ import com.lion.benefito.domain.chatbot.exception.ChatbotErrorCode;
 import com.lion.benefito.domain.chatbot.exception.ChatbotException;
 import com.lion.benefito.domain.chatbot.repository.ChatMessageRepository;
 import com.lion.benefito.domain.chatbot.repository.ChatSessionRepository;
+import com.lion.benefito.domain.posting.dto.PostingSimilarityResponse;
 import com.lion.benefito.domain.user.entity.User;
 import com.lion.benefito.domain.user.exception.UserErrorCode;
 import com.lion.benefito.domain.user.exception.UserException;
 import com.lion.benefito.domain.user.repository.UserRepository;
 import com.lion.benefito.infrastructure.ai.chat.AiChatClient;
+import com.lion.benefito.infrastructure.ai.chat.ChatPromptFactory;
+import com.lion.benefito.infrastructure.ai.chat.OpenAiChatMessage;
+import com.lion.benefito.infrastructure.ai.rag.PostingRetriever;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,10 +28,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ChatbotService {
 
+    // RAG 검색 시 조회할 유사 공고 개수
+    private static final int SIMILAR_POSTING_TOP_K = 5;
+
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
     private final AiChatClient aiChatClient;
+    private final PostingRetriever postingRetriever;
+    private final ChatPromptFactory chatPromptFactory;
 
     @Transactional
     public ChatSessionCreateResponse createSession(Long userId) {
@@ -53,7 +62,12 @@ public class ChatbotService {
                 .build();
         chatMessageRepository.save(userMessage);
 
-        String reply = aiChatClient.generateReply(request.message(), request.postingId());
+        // PostingRetriever 내부에서 질문 임베딩 + pgvector 검색을 모두 수행하므로
+        // 여기서 EmbeddingClient를 별도로 호출하지 않는다.
+        List<PostingSimilarityResponse> searchResults =
+                postingRetriever.findSimilarPostings(request.message(), SIMILAR_POSTING_TOP_K);
+        List<OpenAiChatMessage> chatMessages = chatPromptFactory.createChatMessages(request.message(), searchResults);
+        String reply = aiChatClient.generateReply(chatMessages);
 
         ChatMessage assistantMessage = ChatMessage.builder()
                 .chatSession(chatSession)

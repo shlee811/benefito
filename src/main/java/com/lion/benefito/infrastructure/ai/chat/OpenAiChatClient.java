@@ -11,7 +11,6 @@ import org.springframework.web.client.RestClientException;
 public class OpenAiChatClient implements AiChatClient {
 
     private static final String CHAT_COMPLETIONS_PATH = "/v1/chat/completions";
-    private static final String SYSTEM_PROMPT = "당신은 Benefito 서비스의 AI 어시스턴트입니다. 사용자의 질문에 친절하고 간결하게 답변하세요.";
 
     private final RestClient restClient;
     private final OpenAiChatProperties properties;
@@ -24,14 +23,14 @@ public class OpenAiChatClient implements AiChatClient {
                 .build();
     }
 
+    // 프롬프트 조립은 ChatPromptFactory의 책임이다. 이 클래스는 전달받은 메시지를 그대로 API에 전송만 한다.
     @Override
-    public String generateReply(String message, Long postingId) {
-        // postingId는 이번 PR에서 사용하지 않는다 (PostingRetriever 미구현).
-        if (message == null || message.isBlank()) {
+    public String generateReply(List<OpenAiChatMessage> messages) {
+        if (messages == null || messages.isEmpty()) {
             throw new ChatException(ChatErrorCode.INVALID_INPUT);
         }
 
-        OpenAiChatResponse response = callChatCompletionsApi(message);
+        OpenAiChatResponse response = callChatCompletionsApi(messages);
 
         if (response == null) {
             throw new ChatException(ChatErrorCode.EMPTY_RESPONSE);
@@ -48,14 +47,8 @@ public class OpenAiChatClient implements AiChatClient {
         return replyMessage.content();
     }
 
-    private OpenAiChatResponse callChatCompletionsApi(String message) {
-        OpenAiChatRequest request = new OpenAiChatRequest(
-                properties.getChatModel(),
-                List.of(
-                        new OpenAiChatMessage("system", SYSTEM_PROMPT),
-                        new OpenAiChatMessage("user", message)
-                )
-        );
+    private OpenAiChatResponse callChatCompletionsApi(List<OpenAiChatMessage> messages) {
+        OpenAiChatRequest request = new OpenAiChatRequest(properties.getChatModel(), messages);
         try {
             return restClient.post()
                     .uri(CHAT_COMPLETIONS_PATH)

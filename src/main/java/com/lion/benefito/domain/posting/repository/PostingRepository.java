@@ -29,4 +29,25 @@ public interface PostingRepository extends JpaRepository<Posting, Long>, JpaSpec
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Posting p SET p.viewCount = p.viewCount + 1 WHERE p.id = :postingId")
     int incrementViewCount(@Param("postingId") Long postingId);
+
+    List<Posting> findByEmbeddingIsNull();
+
+    @Modifying(clearAutomatically = true)
+    @Query(value = "UPDATE postings SET embedding = CAST(:embedding AS vector) WHERE id = :postingId", nativeQuery = true)
+    int updateEmbedding(@Param("postingId") Long postingId, @Param("embedding") String embedding);
+
+    // <=>는 pgvector의 코사인 거리 연산자다 (<->는 L2/유클리드 거리이므로 사용하지 않는다). 값이 작을수록 유사하다.
+    @Query(value = """
+            SELECT p.id AS id, p.title AS title, p.content AS content,
+                   c.code AS categoryCode, p.homepage_url AS sourceUrl,
+                   (p.embedding <=> CAST(:queryVector AS vector)) AS distance
+            FROM postings p
+            JOIN common_codes c ON c.id = p.category_code_id
+            WHERE p.embedding IS NOT NULL
+            ORDER BY distance ASC
+            LIMIT :topK
+            """, nativeQuery = true)
+    List<PostingSimilarityProjection> findSimilarPostings(
+            @Param("queryVector") String queryVector,
+            @Param("topK") int topK);
 }

@@ -1,6 +1,8 @@
 package com.lion.benefito.infrastructure.ai.chat;
 
+import java.util.List;
+
 public interface AiChatClient {
 
-    String generateReply(String message, Long postingId);
+    String generateReply(List<OpenAiChatMessage> messages);
 }

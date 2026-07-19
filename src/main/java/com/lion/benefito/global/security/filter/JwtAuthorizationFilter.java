@@ -1,0 +1,118 @@
+package com.lion.benefito.global.security.filter;
+
+import com.lion.benefito.domain.user.entity.User;
+import com.lion.benefito.global.security.jwt.JwtUtil;
+import com.lion.benefito.global.security.userdetails.CustomUserDetails;
+import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Slf4j
+@RequiredArgsConstructor
+public class JwtAuthorizationFilter extends OncePerRequestFilter {
+
+    // JWT 관련 유틸리티 클래스 주입
+    private final JwtUtil jwtUtil;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    @Override
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
+
+        log.info("[ JwtAuthorizationFilter ] 인가 필터 작동");
+
+        try {
+            // 1. Request에서 Access Token 추출
+            String accessToken = jwtUtil.resolveAccessToken(request);
+
+
+            // 2. Access Token이 없으면 다음 필터로 바로 진행
+            if (accessToken == null) {
+
+                log.info("[ JwtAuthorizationFilter ] Access Token 없음, 다음 필터로 진행");
+
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // [블랙리스트 검증 로직 추가]: Redis에 해당 Access Token이 존재하면 로그아웃된 토큰이므로 즉시 거부
+            if (redisTemplate.hasKey(accessToken)) {
+
+                log.warn("[JwtAuthorizationFilter] 로그아웃 처리된 Access Token의 접근입니다.");
+
+                throw new SecurityException("로그아웃된 토큰입니다.");
+            }
+
+            // 3. Access Token을 이용한 인증 처리
+            authenticateAccessToken(accessToken);
+
+            log.info("[ JwtAuthorizationFilter ] 종료. 다음 필터로 넘어갑니다.");
+
+            filterChain.doFilter(request, response);
+
+        } catch (ExpiredJwtException e) {
+
+            // 4. 토큰 만료 시 401 응답 처리
+            logger.warn("[ JwtAuthorizationFilter ] accessToken 이 만료되었습니다.");
+
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("Access Token 이 만료되었습니다.");
+
+        } catch (SecurityException e) {
+
+            // 로그아웃된 토큰 또는 잘못된 토큰 시 예외 처리 및 401 응답 처리 추가
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("유효하지 않은 요청(로그아웃 등)입니다.");
+        }
+    }
+
+    // Access Token을 바탕으로 인증 객체 생성 및 SecurityContext에 저장
+    private void authenticateAccessToken(String accessToken) {
+
+        log.info("[ JwtAuthorizationFilter ] 토큰으로 인가 과정을 시작합니다. ");
+
+        // 1. Access Token의 유효성 검증
+        jwtUtil.validateToken(accessToken);
+
+        log.info("[ JwtAuthorizationFilter ] Access Token 유효성 검증 성공. ");
+
+        // 2. Access Token에서 사용자 정보 추출 후 CustomUserDetails 생성
+        String loginId = jwtUtil.getLoginId(accessToken);
+
+        // 가상의 User 엔티티 객체를 생성하여 loginId를 채워줍니다.
+        // (우리 설계상 CustomUserDetails는 내부적으로 이 객체의 loginId를 쓰고, 권한은 ROLE_USER로 고정합니다.)
+        User user = User.builder()
+                .loginId(loginId)
+                .build();
+
+        CustomUserDetails customUserDetails = new CustomUserDetails(user);
+
+        log.info("[ JwtAuthorizationFilter ] UserDetails 객체 생성 성공 (고정 권한: ROLE_USER)");
+
+        // 3. JWT 검증이 완료되었으므로, 인증 완료 상태의 Authentication 객체를 생성하고 SecurityContextHolder에 저장
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                customUserDetails, null, customUserDetails.getAuthorities()
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("[ JwtAuthorizationFilter ] 인증 객체 저장 완료");
+    }
+}

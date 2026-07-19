@@ -1,6 +1,6 @@
 package com.lion.benefito.domain.posting.exception;
 
-import com.lion.benefito.global.exception.CustomException;
+import com.lion.benefito.global.common.exception.CustomException;
 import lombok.Getter;
 
 @Getter

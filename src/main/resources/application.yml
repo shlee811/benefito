@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:benefito}
     username: ${DB_USERNAME:benefito}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:benefito123}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -19,6 +19,12 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 100
+
+  jwt:
+    secret: ${JWT_SECRET_KEY}
+    token:
+      access-expiration-time: ${JWT_ACCESS_EXPIRATION}
+      refresh-expiration-time: ${JWT_REFRESH_EXPIRATION}
 
 springdoc:
   api-docs:

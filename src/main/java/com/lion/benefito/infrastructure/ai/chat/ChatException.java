@@ -1,6 +1,6 @@
 package com.lion.benefito.infrastructure.ai.chat;
 
-import com.lion.benefito.global.exception.CustomException;
+import com.lion.benefito.global.common.exception.CustomException;
 
 public class ChatException extends CustomException {
 

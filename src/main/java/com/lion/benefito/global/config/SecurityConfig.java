@@ -17,6 +17,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HttpBasicConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -43,15 +44,22 @@ public class SecurityConfig {
             "/auth/**",
             "/swagger-ui/**", // swagger 관련 URL
             "/api-docs/**",
+            "/chatbot/**",
+            "/api/v1/scraps/**"
     };
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
 
         CustomLoginFilter loginFilter = new CustomLoginFilter(authenticationManager(authenticationConfiguration), jwtUtil);
-        loginFilter.setFilterProcessesUrl("/api/v1/auth/login");
+        loginFilter.setFilterProcessesUrl("/auth/login");
 
         http
+                // 프론트엔드 연동을 위한 CORS 설정 추가
+                .cors(cors -> cors.configurationSource(CorsConfig.apiConfigurationSource()))
+                // JWT 구조에 맞게 서버 세션을 생성하지 않도록 무상태(Stateless) 강제
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(request -> request
                         .requestMatchers(allowUrl).permitAll()
                         .anyRequest().authenticated())
@@ -64,7 +72,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .logout(logout -> logout
-                        .logoutUrl("/api/v1/auth/logout") // 로그아웃을 요청할 API 주소 설정
+                        .logoutUrl("/auth/logout") // 로그아웃을 요청할 API 주소 설정
                         .addLogoutHandler(customLogoutHandler) // 비즈니스 로직(DB 삭제 등)을 처리할 핸들러 등록
                         .logoutSuccessHandler(customLogoutSuccessHandler) // 로그아웃 성공 후 JSON 반환 핸들러 등록
                 )

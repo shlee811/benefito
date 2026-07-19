@@ -1,14 +1,13 @@
 package com.lion.benefito.infrastructure.ai.chat;
 
-import org.springframework.stereotype.Component;
+import java.util.List;
 
-@Component
 public class MockAiChatClient implements AiChatClient {
 
     private static final String MOCK_REPLY = "현재 AI 연동 전 테스트 응답입니다.";
 
     @Override
-    public String generateReply(String message, Long postingId) {
+    public String generateReply(List<OpenAiChatMessage> messages) {
         return MOCK_REPLY;
     }
 }

@@ -11,5 +11,15 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  benefito-redis:
+    image: redis:7-alpine
+    container_name: benefito-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  redisdata:

@@ -62,8 +62,7 @@ public class UserController {
         log.info("[ UserController ] 내 프로필 수정 요청 수신. userId={}", userDetails.getUsername());
 
         UserResDTO.MyProfile updatedProfile = userCommandService.updateProfile(
-                userDetails.getUser().getId(), request
-        );
+                userDetails.getUser().getId(), request);
 
         return CustomResponse.onSuccess(updatedProfile);
     }
@@ -79,5 +78,19 @@ public class UserController {
         userCommandService.updatePassword(userDetails.getUser().getId(), request);
 
         return CustomResponse.onSuccess("비밀번호 변경 성공");
+    }
+
+    @PatchMapping("/interests")
+    @Operation(summary = "관심 분야 수정", description = "사용자의 관심 분야를 수정합니다.")
+    public CustomResponse<UserResDTO.UpdateInterestsResult> updateInterests(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid UserReqDTO.UpdateInterests request) {
+
+        log.info("[ UserController ] 관심 분야 수정 요청 수신. userId={}", userDetails.getUsername());
+
+        UserResDTO.UpdateInterestsResult result = userCommandService.updateInterests(
+                userDetails.getUser().getId(), request);
+
+        return CustomResponse.onSuccess(result);
     }
 }

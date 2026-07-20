@@ -12,4 +12,6 @@ public interface UserCommandService {
     UserResDTO.MyProfile updateProfile(Long userId, UserReqDTO.UpdateProfile request);
 
     void updatePassword(Long userId, UserReqDTO.UpdatePassword request);
+
+    UserResDTO.UpdateInterestsResult updateInterests(Long userId, UserReqDTO.UpdateInterests request);
 }

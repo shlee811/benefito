@@ -72,8 +72,13 @@ public class UserReqDTO {
             @NotBlank(message = "거주 지역은 필수 입력 값입니다.")
             String regionCode,
 
-            Income income,
+            Income income
+    ) {
+    }
 
+    @Builder
+    public record UpdateInterests(
+            @NotNull(message = "관심분야 리스트는 필수 입력 값입니다. (빈 리스트 가능)")
             @Size(max = 5, message = "관심분야는 최대 5개까지만 선택할 수 있습니다.")
             List<String> categoryCodes
     ) {

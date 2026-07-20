@@ -4,6 +4,7 @@ import com.lion.benefito.domain.posting.dto.CalendarDeadlineCountResponse;
 import com.lion.benefito.domain.posting.entity.Posting;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -31,6 +32,9 @@ public interface PostingRepository extends JpaRepository<Posting, Long>, JpaSpec
     int incrementViewCount(@Param("postingId") Long postingId);
 
     List<Posting> findByEmbeddingIsNull();
+
+    // 외부 수집 공고의 중복 확인(sourceType + externalId)에 사용한다.
+    Optional<Posting> findBySourceTypeAndExternalId(String sourceType, String externalId);
 
     @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE postings SET embedding = CAST(:embedding AS vector) WHERE id = :postingId", nativeQuery = true)

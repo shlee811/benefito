@@ -27,7 +27,7 @@ public class UserCleanupScheduler {
         // 한 달 전 날짜 계산
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
 
-        // 한 달 이전에 soft deleted 회원 조회
+        // 한 달 이전에 soft deleted 회원ㄱ 조회
         List<User> usersToDelete = userRepository.findByDeletedAtBefore(oneMonthAgo);
 
         if (usersToDelete.isEmpty()) {

@@ -27,8 +27,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         log.info("[ CustomUserDetailsService ] LoginId 를 이용하여 User 를 검색합니다.");
 
-        // 유저가 존재하면 CustomUserDetails 를 반환, 없으면 예외 처리
-        Optional<User> userEntity = userRepository.findByLoginId(loginId);
+        // 유저가 존재하면 CustomUserDetails 를 반환, 없으면 예외 처리 (탈퇴 회원은 조회 제외)
+        Optional<User> userEntity = userRepository.findByLoginIdAndDeletedAtIsNull(loginId);
         if(userEntity.isPresent()){
             User user = userEntity.get();
             return new CustomUserDetails(user);

@@ -15,20 +15,18 @@ import org.springframework.stereotype.Component;
 
 /**
  * ExternalPostingData(공통 모델) <-> Posting 변환을 담당한다.
- * 지금은 K-Startup만 연동하므로 카테고리를 "정부지원사업(GOVERNMENT_SUPPORT)"으로 고정한다.
- * 추후 세부 카테고리 매핑이나 다른 소스가 추가되면 이 클래스만 확장하면 된다.
+ * 소스별로 카테고리가 고정값이므로 sourceType -> CATEGORY 코드를 매핑해 조회한다.
+ * 추후 세부 카테고리 매핑이 필요해지면 이 매핑 부분만 확장하면 된다.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class PostingMapper {
 
-    private static final String FIXED_CATEGORY_CODE = "GOVERNMENT_SUPPORT";
-
     private final CodeRepository codeRepository;
 
     public Posting toNewPosting(ExternalPostingData data) {
-        Code categoryCode = resolveCategoryCode();
+        Code categoryCode = resolveCategoryCode(data.sourceType());
         Code regionCode = resolveRegionCode(data.region());
 
         return Posting.builder()
@@ -58,7 +56,7 @@ public class PostingMapper {
                 || !Objects.equals(codeId(posting.getRegionCode()), codeId(regionCode));
 
         if (changed) {
-            Code categoryCode = resolveCategoryCode();
+            Code categoryCode = resolveCategoryCode(data.sourceType());
             posting.updateFrom(categoryCode, regionCode, data.title(), data.organization(), data.content(),
                     data.deadline(), data.originalUrl(), data.qualification());
         }
@@ -66,8 +64,15 @@ public class PostingMapper {
         return changed;
     }
 
-    private Code resolveCategoryCode() {
-        return codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, FIXED_CATEGORY_CODE)
+    // 소스별 고정 카테고리 매핑. 새 소스가 추가되면 케이스만 추가하면 된다.
+    private Code resolveCategoryCode(String sourceType) {
+        String fixedCategoryCode = switch (sourceType) {
+            case "KSTARTUP" -> "GOVERNMENT_SUPPORT";
+            case "PUBLIC_INSTITUTION_JOB" -> "JOB";
+            default -> throw new ExternalPostingException(ExternalPostingErrorCode.CATEGORY_CODE_NOT_CONFIGURED);
+        };
+
+        return codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, fixedCategoryCode)
                 .orElseThrow(() -> new ExternalPostingException(ExternalPostingErrorCode.CATEGORY_CODE_NOT_CONFIGURED));
     }
 

@@ -65,7 +65,11 @@ public class Posting extends BaseTimeEntity {
     private long viewCount;
 
     // title/content 기반 임베딩 벡터. PostingRepository.updateEmbedding() 벌크 쿼리로만 갱신한다(viewCount와 동일한 방식).
-    @Column(columnDefinition = "vector(1536)")
+    // insertable/updatable=false: Hibernate가 이 컬럼을 INSERT/UPDATE SQL에 포함시키면 String 파라미터를
+    // vector 컬럼에 바인딩하려다 "column embedding is of type vector but expression is of type character
+    // varying" 오류가 난다(신규 Posting을 JPA save()로 insert할 때 실제로 재현됨). 항상 이 컬럼을 제외시키고
+    // 신규 행은 DB 기본값(NULL)로 들어가게 한 뒤, 위 네이티브 쿼리(명시적 CAST 포함)로만 값을 채운다.
+    @Column(columnDefinition = "vector(1536)", insertable = false, updatable = false)
     private String embedding;
 
     // 외부 수집 공고 식별 정보. 수동 등록 공고는 둘 다 null이며, NULL끼리는 unique 제약에 걸리지 않는다.

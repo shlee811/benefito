@@ -4,6 +4,7 @@ import com.lion.benefito.domain.posting.dto.ExternalPostingImportResponse;
 import com.lion.benefito.domain.posting.service.ExternalPostingIngestService;
 import com.lion.benefito.global.common.CustomResponse;
 import com.lion.benefito.infrastructure.external.kstartup.KStartupPostingSource;
+import com.lion.benefito.infrastructure.external.publicinstitutionjob.PublicInstitutionJobPostingSource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,11 +25,19 @@ public class ExternalPostingAdminController {
 
     private final ExternalPostingIngestService externalPostingIngestService;
     private final KStartupPostingSource kStartupPostingSource;
+    private final PublicInstitutionJobPostingSource publicInstitutionJobPostingSource;
 
     @Operation(summary = "K-Startup 공고 수동 수집", description = "K-Startup 공고를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/kstartup/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importKStartupPostings() {
         ExternalPostingImportResponse response = externalPostingIngestService.importFrom(kStartupPostingSource);
+        return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "공공기관 채용정보 수동 수집", description = "공공기관 채용정보를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
+    @PostMapping("/api/v1/admin/external-postings/public-institution-job/import")
+    public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importPublicInstitutionJobPostings() {
+        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(publicInstitutionJobPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 }

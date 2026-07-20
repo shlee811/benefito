@@ -120,30 +120,11 @@ public class UserCommandServiceImpl implements UserCommandService {
                 request.income()
         );
 
-        // 4. 관심 분야 매핑 갱신 (기존 것 삭제 후 벌크 저장)
-        userInterestRepository.deleteByUserId(userId);
-
-        List<String> categoryNames = List.of();
-        if (request.categoryCodes() != null && !request.categoryCodes().isEmpty()) {
-            List<UserInterest> interests = request.categoryCodes().stream()
-                    .map(codeName -> {
-                        Code categoryCode = codeRepository.findByCode(codeName)
-                                .orElseThrow(() -> new CodeException(CodeErrorCode.CODE_NOT_FOUND));
-                        if (categoryCode.getCodeType() != CommonCodeType.CATEGORY) {
-                            throw new CodeException(CodeErrorCode.CODE_NOT_FOUND);
-                        }
-                        return UserInterest.builder()
-                                .user(user)
-                                .categoryCode(categoryCode)
-                                .build();
-                    })
-                    .toList();
-            userInterestRepository.saveAll(interests);
-
-            categoryNames = interests.stream()
-                    .map(interest -> interest.getCategoryCode().getName())
-                    .toList();
-        }
+        // 4. 기존 관심 분야 목록 로드 (프로필 수정에서 관심사 갱신 제외)
+        List<UserInterest> userInterests = userInterestRepository.findByUserId(userId);
+        List<String> categoryNames = userInterests.stream()
+                .map(interest -> interest.getCategoryCode().getName())
+                .toList();
 
         log.info("[ UserCommandService ] 회원 프로필 수정이 정상 완료되었습니다. loginId={}", user.getLoginId());
 
@@ -174,5 +155,47 @@ public class UserCommandServiceImpl implements UserCommandService {
         user.updatePassword(encodedNewPassword);
 
         log.info("[ UserCommandService ] 회원 비밀번호 변경이 완료되었습니다. loginId={}", user.getLoginId());
+    }
+
+    @Override
+    public UserResDTO.UpdateInterestsResult updateInterests(Long userId, UserReqDTO.UpdateInterests request) {
+
+        log.info("[ UserCommandService ] 회원 관심분야 수정을 시작합니다. userId={}", userId);
+
+        // 1. 회원 조회 (소프트 딜리트 필터 적용)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+
+        // 2. 기존 관심 분야 매핑 정보 전체 삭제
+        userInterestRepository.deleteByUserId(userId);
+
+        // 3. 신규 관심 카테고리 매핑 생성 및 벌크 저장
+        List<String> categoryNames = List.of();
+        if (request.categoryCodes() != null && !request.categoryCodes().isEmpty()) {
+            List<UserInterest> interests = request.categoryCodes().stream()
+                    .map(codeName -> {
+                        Code categoryCode = codeRepository.findByCode(codeName)
+                                .orElseThrow(() -> new CodeException(CodeErrorCode.CODE_NOT_FOUND));
+                        if (categoryCode.getCodeType() != CommonCodeType.CATEGORY) {
+                            throw new CodeException(CodeErrorCode.CODE_NOT_FOUND);
+                        }
+                        return UserInterest.builder()
+                                .user(user)
+                                .categoryCode(categoryCode)
+                                .build();
+                    })
+                    .toList();
+            userInterestRepository.saveAll(interests);
+
+            categoryNames = interests.stream()
+                    .map(interest -> interest.getCategoryCode().getName())
+                    .toList();
+        }
+
+        log.info("[ UserCommandService ] 회원 관심분야 수정이 정상 완료되었습니다. loginId={}", user.getLoginId());
+
+        return UserResDTO.UpdateInterestsResult.builder()
+                .categoryNames(categoryNames)
+                .build();
     }
 }

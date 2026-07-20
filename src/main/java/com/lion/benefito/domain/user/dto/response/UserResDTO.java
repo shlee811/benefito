@@ -32,4 +32,10 @@ public class UserResDTO {
             List<String> categoryNames
     ) {
     }
+
+    @Builder
+    public record UpdateInterestsResult(
+            List<String> categoryNames
+    ) {
+    }
 }

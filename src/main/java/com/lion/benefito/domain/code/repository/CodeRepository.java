@@ -15,4 +15,6 @@ public interface CodeRepository extends JpaRepository<Code, Long> {
 
     // 외부 API가 내려주는 지역명은 Code.code("SEOUL")이 아니라 Code.name("서울")과 일치하므로 name으로 조회한다.
     Optional<Code> findByCodeTypeAndName(CommonCodeType codeType, String name);
+
+    Optional<Code> findByCode(String code);
 }

@@ -35,13 +35,12 @@ public class SecurityConfig {
     private final CustomLogoutSuccessHandler customLogoutSuccessHandler;
     private final RedisTemplate<String, Object> redisTemplate;
 
-
     //인증이 필요하지 않은 url
     private final String[] allowUrl = {
             "/auth/login", // 로그인은 인증이 필요하지 않음
             "/auth/signup", // 회원가입은 인증이 필요하지 않음
             "/auth/reissue", // 토큰 재발급은 인증이 필요하지 않음
-            "/auth/**",
+            "/auth/check-id", // 아이디 중복 검사는 인증이 필요하지 않음
             "/swagger-ui/**", // swagger 관련 URL
             "/api-docs/**",
             "/chatbot/**",
@@ -86,7 +85,6 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
-
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder();}

@@ -54,4 +54,24 @@ public class User extends BaseTimeEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    public void updateProfile(String name, String school, String major, LocalDate birthDate, Grade grade, Code regionCode, Income income) {
+        this.name = name;
+        this.school = school;
+        this.major = major;
+        this.birthDate = birthDate;
+        this.grade = grade;
+        this.regionCode = regionCode;
+        this.income = income;
+    }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+        // 탈퇴 시 로그인 ID 뒤에 UUID 난수를 덧붙여 물리적 UNIQUE 제약조건 충돌 우회
+        this.loginId = this.loginId + "_withdrawn_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+    }
 }

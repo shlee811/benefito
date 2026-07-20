@@ -45,7 +45,8 @@ public class SecurityConfig {
             "/swagger-ui/**", // swagger 관련 URL
             "/api-docs/**",
             "/chatbot/**",
-            "/api/v1/scraps/**"
+            "/api/v1/scraps/**",
+            "/api/v1/admin/external-postings/**" // 관리자 인증 미구현 상태의 개발 전용 API(external.admin-api.enabled=true일 때만 존재)
     };
 
     @Bean

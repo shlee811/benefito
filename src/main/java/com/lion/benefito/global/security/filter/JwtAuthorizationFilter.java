@@ -32,15 +32,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain
-    ) throws ServletException, IOException {
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         log.info("[ JwtAuthorizationFilter ] 인가 필터 작동");
 
         try {
             // 1. Request에서 Access Token 추출
             String accessToken = jwtUtil.resolveAccessToken(request);
-
 
             // 2. Access Token이 없으면 다음 필터로 바로 진행
             if (accessToken == null) {
@@ -95,11 +93,12 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         log.info("[ JwtAuthorizationFilter ] Access Token 유효성 검증 성공. ");
 
         // 2. Access Token에서 사용자 정보 추출 후 CustomUserDetails 생성
+        Long id = jwtUtil.getUserId(accessToken);
         String loginId = jwtUtil.getLoginId(accessToken);
 
-        // 가상의 User 엔티티 객체를 생성하여 loginId를 채워줍니다.
-        // (우리 설계상 CustomUserDetails는 내부적으로 이 객체의 loginId를 쓰고, 권한은 ROLE_USER로 고정합니다.)
+        // 가상의 User 엔티티 객체를 생성하여 id와 loginId를 채워줍니다.
         User user = User.builder()
+                .id(id)
                 .loginId(loginId)
                 .build();
 

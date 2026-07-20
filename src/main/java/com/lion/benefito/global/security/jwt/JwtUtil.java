@@ -60,6 +60,23 @@ public class JwtUtil {
         }
     }
 
+    // JWT 토큰을 입력으로 받아 클레임으로부터 사용자 DB 식별자(PK) 추출하는 메서드
+    public Long getUserId(String token) {
+
+        log.info("[ JwtUtil ] 토큰에서 UserId 를 추출합니다.");
+
+        try {
+            return Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .get("id", Long.class);
+        } catch (Exception e) {
+            throw new SecurityException("잘못된 토큰입니다.");
+        }
+    }
+
     // Token 발급하는 메서드
     public String tokenProvider(CustomUserDetails customUserDetails, Instant expiration) {
 
@@ -72,11 +89,15 @@ public class JwtUtil {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
+        // 유저 고유 PK ID 추출 (안전한 방어 코드 적용)
+        Long userId = (customUserDetails.getUser() != null) ? customUserDetails.getUser().getId() : null;
+
         return Jwts.builder()
                 .header()
                 .add("typ", "JWT") // JWT type
                 .and()
                 .subject(customUserDetails.getUsername())
+                .claim("id", userId) // 유저 ID(PK) 추가
                 .claim("role", authorities) // 권한 추가
                 .issuedAt(Date.from(issuedAt)) // 현재 시간 추가
                 .expiration(Date.from(expiration)) // 만료 시간 추가
@@ -113,10 +134,18 @@ public class JwtUtil {
         // 1. refreshToken 에서 user 의 loginId를 추출
         String loginId = getLoginId(refreshToken);
 
-        // 2. 주입 받은 customUserDetailsService를 사용해 DB에서 최신 유저 엔티티가 담긴 UserDetails를 가져옵니다.
+        // 2. DB에 저장된 현재 활성 Refresh Token을 가져와 대조 검증 (RTR 적용)
+        Token savedToken = tokenRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new SecurityException("로그아웃 되었거나 세션이 만료되었습니다. 다시 로그인해 주세요."));
+
+        if (!savedToken.getToken().equals(refreshToken)) {
+            throw new SecurityException("이미 사용되었거나 만료된 Refresh Token입니다. 다시 로그인해 주세요.");
+        }
+
+        // 3. 주입 받은 customUserDetailsService를 사용해 DB에서 최신 유저 엔티티가 담긴 UserDetails를 가져옵니다.
         CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(loginId);
 
-        // 3. 재발급
+        // 4. 재발급
         return new JwtDTO(
                 createJwtAccessToken(userDetails),
                 createJwtRefreshToken(userDetails)
@@ -136,7 +165,7 @@ public class JwtUtil {
 
         log.info("[ JwtUtil ] 헤더에 토큰이 존재합니다.");
 
-        return tokenFromHeader.split(" ")[1]; //Bearer 와 분리
+        return tokenFromHeader.split(" ")[1]; // Bearer 와 분리
     }
 
     // 토큰 유효성 검증
@@ -147,7 +176,7 @@ public class JwtUtil {
         try {
             // 구문 분석 시스템의 시계가 JWT를 생성한 시스템의 시계 오차 고려
             // 약 3분 허용.
-            long seconds = 3 *60;
+            long seconds = 3 * 60;
             boolean isExpired = Jwts
                     .parser()
                     .clockSkewSeconds(seconds)
@@ -161,10 +190,10 @@ public class JwtUtil {
                 log.info("만료된 JWT 토큰입니다.");
             }
         } catch (SecurityException | MalformedJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-            //원하는 Exception throw
+            // 원하는 Exception throw
             throw new SecurityException("잘못된 토큰입니다.");
         } catch (ExpiredJwtException e) {
-            //원하는 Exception throw
+            // 원하는 Exception throw
             throw new ExpiredJwtException(null, null, "만료된 JWT 토큰입니다.");
         }
     }

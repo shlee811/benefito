@@ -10,6 +10,8 @@ public interface CodeRepository extends JpaRepository<Code, Long> {
 
     List<Code> findByCodeTypeAndIsActiveTrueOrderByDisplayOrderAsc(CommonCodeType codeType);
 
+    Optional<Code> findByCode(String code);
+
     // 고정 카테고리(예: 정부지원사업)처럼 내부 코드값(Code.code)이 이미 알려진 경우의 조회.
     Optional<Code> findByCodeTypeAndCode(CommonCodeType codeType, String code);
 

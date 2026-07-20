@@ -46,6 +46,11 @@ class PostingMapperTest {
                 "https://k-startup.go.kr/1", "사업화", region, qualification, deadline);
     }
 
+    private ExternalPostingData publicInstitutionJobData(String region, LocalDate deadline) {
+        return new ExternalPostingData("PUBLIC_INSTITUTION_JOB", "302908", "제목", "내용", "기관",
+                "https://example.com/1", null, region, "학력무관", deadline);
+    }
+
     @Test
     void 신규_공고는_카테고리가_GOVERNMENT_SUPPORT로_고정되고_지역명이_일치하면_regionCode가_매핑된다() {
         when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
@@ -78,6 +83,23 @@ class PostingMapperTest {
                 .isInstanceOf(ExternalPostingException.class)
                 .satisfies(ex -> assertThat(((ExternalPostingException) ex).getCode())
                         .isEqualTo(ExternalPostingErrorCode.CATEGORY_CODE_NOT_CONFIGURED));
+    }
+
+    @Test
+    void PUBLIC_INSTITUTION_JOB_소스는_카테고리가_JOB으로_고정된다() {
+        Code jobCode = mock(Code.class);
+        when(jobCode.getId()).thenReturn(300L);
+        when(codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, "JOB"))
+                .thenReturn(Optional.of(jobCode));
+        when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "전국"))
+                .thenReturn(Optional.empty());
+
+        Posting posting = postingMapper.toNewPosting(
+                publicInstitutionJobData("전국", LocalDate.of(2026, 8, 4)));
+
+        assertThat(posting.getCategoryCode()).isEqualTo(jobCode);
+        assertThat(posting.getSourceType()).isEqualTo("PUBLIC_INSTITUTION_JOB");
+        assertThat(posting.getRegionCode()).isNull();
     }
 
     @Test

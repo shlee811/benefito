@@ -31,4 +31,5 @@ INSERT INTO common_codes (code_type, code, name, display_order, is_active, creat
 ('REGION', 'JEONNAM', '전남', 14, true, now(), now()),
 ('REGION', 'GYEONGBUK', '경북', 15, true, now(), now()),
 ('REGION', 'GYEONGNAM', '경남', 16, true, now(), now()),
-('REGION', 'JEJU', '제주', 17, true, now(), now());
+('REGION', 'JEJU', '제주', 17, true, now(), now()),
+('REGION', 'ALL', '전국', 18, true, now(), now());

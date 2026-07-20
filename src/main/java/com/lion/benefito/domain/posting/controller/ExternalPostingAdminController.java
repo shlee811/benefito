@@ -5,6 +5,7 @@ import com.lion.benefito.domain.posting.service.ExternalPostingIngestService;
 import com.lion.benefito.global.common.CustomResponse;
 import com.lion.benefito.infrastructure.external.kstartup.KStartupPostingSource;
 import com.lion.benefito.infrastructure.external.publicinstitutionjob.PublicInstitutionJobPostingSource;
+import com.lion.benefito.infrastructure.external.qnet.QNetPostingSource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class ExternalPostingAdminController {
     private final ExternalPostingIngestService externalPostingIngestService;
     private final KStartupPostingSource kStartupPostingSource;
     private final PublicInstitutionJobPostingSource publicInstitutionJobPostingSource;
+    private final QNetPostingSource qNetPostingSource;
 
     @Operation(summary = "K-Startup 공고 수동 수집", description = "K-Startup 공고를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/kstartup/import")
@@ -38,6 +40,13 @@ public class ExternalPostingAdminController {
     @PostMapping("/api/v1/admin/external-postings/public-institution-job/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importPublicInstitutionJobPostings() {
         ExternalPostingImportResponse response = externalPostingIngestService.importFrom(publicInstitutionJobPostingSource);
+        return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "Q-Net 자격시험 일정 수동 수집", description = "설정된 target-codes 종목의 시험일정을 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
+    @PostMapping("/api/v1/admin/external-postings/qnet/import")
+    public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importQNetPostings() {
+        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(qNetPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 }

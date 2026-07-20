@@ -62,3 +62,10 @@ external:
     num-of-rows: 100
     # 실행 1회당 최대로 조회할 페이지 수. 전체 건수(totalCount)가 매우 커서(11만건 이상) 상한이 특히 중요하다.
     max-pages: 5
+  qnet:
+    base-url: http://openapi.q-net.or.kr/api/service/rest
+    api-key: ${QNET_API_KEY:}
+    # 종목 목록(jmCd) 중 시험일정을 실제로 수집할 대상만 지정한다(getJMList는 jmCd 없이 전체 조회가 불가능).
+    # 1320 = 정보처리기사. 필요한 종목코드를 이 목록에 추가하면 코드 변경 없이 수집 대상이 늘어난다.
+    target-codes:
+      - "1320"

@@ -69,6 +69,7 @@ public class PostingMapper {
         String fixedCategoryCode = switch (sourceType) {
             case "KSTARTUP" -> "GOVERNMENT_SUPPORT";
             case "PUBLIC_INSTITUTION_JOB" -> "JOB";
+            case "QNET" -> "CERTIFICATE";
             default -> throw new ExternalPostingException(ExternalPostingErrorCode.CATEGORY_CODE_NOT_CONFIGURED);
         };
 

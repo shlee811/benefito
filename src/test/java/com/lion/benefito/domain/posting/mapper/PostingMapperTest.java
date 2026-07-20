@@ -51,6 +51,12 @@ class PostingMapperTest {
                 "https://example.com/1", null, region, "학력무관", deadline);
     }
 
+    private ExternalPostingData qNetData(LocalDate deadline) {
+        return new ExternalPostingData("QNET", "1320-2026년 정기 기사 1회", "정보처리기사 2026년 정기 기사 1회",
+                "필기시험 원서접수: 20260112 ~ 20260115", "한국산업인력공단",
+                "https://www.q-net.or.kr", null, null, "정보통신 > 정보기술", deadline);
+    }
+
     @Test
     void 신규_공고는_카테고리가_GOVERNMENT_SUPPORT로_고정되고_지역명이_일치하면_regionCode가_매핑된다() {
         when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
@@ -100,6 +106,21 @@ class PostingMapperTest {
         assertThat(posting.getCategoryCode()).isEqualTo(jobCode);
         assertThat(posting.getSourceType()).isEqualTo("PUBLIC_INSTITUTION_JOB");
         assertThat(posting.getRegionCode()).isNull();
+    }
+
+    @Test
+    void QNET_소스는_카테고리가_CERTIFICATE로_고정되고_regionCode는_항상_null이다() {
+        Code certificateCode = mock(Code.class);
+        when(certificateCode.getId()).thenReturn(400L);
+        when(codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, "CERTIFICATE"))
+                .thenReturn(Optional.of(certificateCode));
+
+        Posting posting = postingMapper.toNewPosting(qNetData(LocalDate.of(2026, 1, 15)));
+
+        assertThat(posting.getCategoryCode()).isEqualTo(certificateCode);
+        assertThat(posting.getSourceType()).isEqualTo("QNET");
+        assertThat(posting.getRegionCode()).isNull();
+        verify(codeRepository, never()).findByCodeTypeAndName(any(), any());
     }
 
     @Test

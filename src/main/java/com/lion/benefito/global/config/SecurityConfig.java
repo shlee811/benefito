@@ -43,10 +43,11 @@ public class SecurityConfig {
             "/auth/check-id", // 아이디 중복 검사는 인증이 필요하지 않음
             "/swagger-ui/**", // swagger 관련 URL
             "/api-docs/**",
-            "/chatbot/**",
+            "/postings/**", // 공고 조회는 비회원도 가능해야 함(Issue #44)
             "/api/v1/scraps/**",
             "/api/v1/admin/external-postings/**" // 관리자 인증 미구현 상태의 개발 전용 API(external.admin-api.enabled=true일 때만 존재)
     };
+    // 챗봇(/chatbot/**)은 위 목록에서 의도적으로 제외했다 - 로그인한 회원만 사용할 수 있어야 한다(Issue #44).
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{

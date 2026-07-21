@@ -2,6 +2,9 @@ package com.lion.benefito.domain.scrap.service.query;
 
 import com.lion.benefito.domain.code.entity.CommonCodeType;
 import com.lion.benefito.domain.code.repository.CodeRepository;
+import com.lion.benefito.domain.posting.repository.PostingRepository;
+import com.lion.benefito.domain.posting.exception.PostingErrorCode;
+import com.lion.benefito.domain.posting.exception.PostingException;
 import com.lion.benefito.domain.scrap.dto.response.ScrapResDTO;
 import com.lion.benefito.domain.scrap.entity.Scrap;
 import com.lion.benefito.domain.scrap.exception.ScrapErrorCode;
@@ -22,6 +25,7 @@ public class ScrapQueryServiceImpl implements ScrapQueryService {
 
     private final ScrapRepository scrapRepository;
     private final CodeRepository codeRepository;
+    private final PostingRepository postingRepository;
 
     private void validateCategoryCode(String categoryCode) {
         if (categoryCode != null && !categoryCode.isBlank()) {
@@ -122,6 +126,11 @@ public class ScrapQueryServiceImpl implements ScrapQueryService {
     public ScrapResDTO.PostingScrapCount getScrapCountByPosting(Long postingId) {
 
         log.info("[ ScrapQueryService ] 특정 공고 스크랩 수 조회를 시작합니다. postingId={}", postingId);
+
+        // 1. 공고가 존재하는지 검증
+        if (!postingRepository.existsById(postingId)) {
+            throw new PostingException(PostingErrorCode.POSTING_NOT_FOUND);
+        }
 
         long scrapCount = scrapRepository.countByPostingId(postingId);
 

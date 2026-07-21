@@ -119,6 +119,7 @@ public class QNetPostingSource implements ExternalPostingSource {
                 null,
                 null,
                 buildQualification(item),
+                null,
                 parseDeadline(item.docRegEndDt())
         );
     }

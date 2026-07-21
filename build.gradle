@@ -56,6 +56,9 @@ dependencies {
 
 	// XML (Q-Net OpenAPI가 XML 응답만 지원해서 필요)
 	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
+
+	// CSV (장학금 데이터가 따옴표/개행 포함 CSV라 안전한 파서가 필요)
+	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv'
 }
 
 tasks.named('test') {

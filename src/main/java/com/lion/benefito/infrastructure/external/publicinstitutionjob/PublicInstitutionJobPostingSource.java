@@ -77,6 +77,7 @@ public class PublicInstitutionJobPostingSource implements ExternalPostingSource 
                 null,
                 resolveRegionName(item.workRgnNmLst()),
                 buildQualification(item),
+                null,
                 parseDeadline(item.pbancEndYmd())
         );
     }

@@ -37,7 +37,7 @@ class ExternalPostingIngestServiceTest {
 
     private ExternalPostingData data(String externalId) {
         return new ExternalPostingData("KSTARTUP", externalId, "제목" + externalId, "내용", "회사",
-                "https://k-startup.go.kr/" + externalId, "사업화", "서울", "누구나", LocalDate.of(2026, 8, 3));
+                "https://k-startup.go.kr/" + externalId, "사업화", "서울", "누구나", null, LocalDate.of(2026, 8, 3));
     }
 
     private Posting posting(Long id) {

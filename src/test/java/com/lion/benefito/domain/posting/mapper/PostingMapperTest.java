@@ -43,18 +43,24 @@ class PostingMapperTest {
 
     private ExternalPostingData data(String region, String qualification, LocalDate deadline) {
         return new ExternalPostingData("KSTARTUP", "178584", "제목", "내용", "회사",
-                "https://k-startup.go.kr/1", "사업화", region, qualification, deadline);
+                "https://k-startup.go.kr/1", "사업화", region, qualification, null, deadline);
     }
 
     private ExternalPostingData publicInstitutionJobData(String region, LocalDate deadline) {
         return new ExternalPostingData("PUBLIC_INSTITUTION_JOB", "302908", "제목", "내용", "기관",
-                "https://example.com/1", null, region, "학력무관", deadline);
+                "https://example.com/1", null, region, "학력무관", null, deadline);
     }
 
     private ExternalPostingData qNetData(LocalDate deadline) {
         return new ExternalPostingData("QNET", "1320-2026년 정기 기사 1회", "정보처리기사 2026년 정기 기사 1회",
                 "필기시험 원서접수: 20260112 ~ 20260115", "한국산업인력공단",
-                "https://www.q-net.or.kr", null, null, "정보통신 > 정보기술", deadline);
+                "https://www.q-net.or.kr", null, null, "정보통신 > 정보기술", null, deadline);
+    }
+
+    private ExternalPostingData scholarshipData(LocalDate startDate, LocalDate deadline) {
+        return new ExternalPostingData("SCHOLARSHIP", "1", "테스트재단 생활비 장학금",
+                "1인당 100만원 생활비 지원", "테스트재단",
+                "https://example.com/1", null, null, "성적 3.0 이상", startDate, deadline);
     }
 
     @Test
@@ -106,6 +112,22 @@ class PostingMapperTest {
         assertThat(posting.getCategoryCode()).isEqualTo(jobCode);
         assertThat(posting.getSourceType()).isEqualTo("PUBLIC_INSTITUTION_JOB");
         assertThat(posting.getRegionCode()).isNull();
+    }
+
+    @Test
+    void SCHOLARSHIP_소스는_카테고리가_SCHOLARSHIP으로_고정된다() {
+        Code scholarshipCode = mock(Code.class);
+        when(scholarshipCode.getId()).thenReturn(500L);
+        when(codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, "SCHOLARSHIP"))
+                .thenReturn(Optional.of(scholarshipCode));
+
+        Posting posting = postingMapper.toNewPosting(
+                scholarshipData(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)));
+
+        assertThat(posting.getCategoryCode()).isEqualTo(scholarshipCode);
+        assertThat(posting.getSourceType()).isEqualTo("SCHOLARSHIP");
+        assertThat(posting.getRegionCode()).isNull();
+        assertThat(posting.getEndDate()).isEqualTo(LocalDate.of(2026, 1, 31));
     }
 
     @Test

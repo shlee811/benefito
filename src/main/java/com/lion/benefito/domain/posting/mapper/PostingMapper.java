@@ -70,6 +70,7 @@ public class PostingMapper {
             case "KSTARTUP" -> "GOVERNMENT_SUPPORT";
             case "PUBLIC_INSTITUTION_JOB" -> "JOB";
             case "QNET" -> "CERTIFICATE";
+            case "SCHOLARSHIP" -> "SCHOLARSHIP";
             default -> throw new ExternalPostingException(ExternalPostingErrorCode.CATEGORY_CODE_NOT_CONFIGURED);
         };
 

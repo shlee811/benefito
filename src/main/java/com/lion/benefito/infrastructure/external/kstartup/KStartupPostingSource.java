@@ -76,6 +76,7 @@ public class KStartupPostingSource implements ExternalPostingSource {
                 item.suptBizClsfc(),
                 item.suptRegin(),
                 buildQualification(item),
+                null,
                 parseDeadline(item.pbancRcptEndDt())
         );
     }

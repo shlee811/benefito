@@ -53,9 +53,6 @@ external:
     per-page: 100
     # 실행 1회당 최대로 조회할 페이지 수. totalCount 기준으로도 조기 종료하지만, 이 값이 수집 범위의 상한이다.
     max-pages: 5
-    scheduler:
-      enabled: false
-      cron: "0 0 3 * * *"
   public-institution-job:
     base-url: https://apis.data.go.kr/1051000/recruitment
     api-key: ${PUBLIC_INSTITUTION_JOB_API_KEY:}
@@ -76,3 +73,11 @@ external:
   seed:
     # 공식 API/CSV가 없는 공모전(CONTEST)·대외활동(EXTRACURRICULAR) 시연용 시드 데이터.
     csv-path: classpath:data/seed_contest_activity.csv
+
+  # API 기반 소스(K-Startup/공공기관 채용/Q-Net)만 자동 수집한다.
+  # CSV 기반 소스(장학금, 공모전/대외활동 시드)는 사람이 파일을 관리하므로 스케줄러 대상이 아니다.
+  scheduler:
+    enabled: ${EXTERNAL_SCHEDULER_ENABLED:false}
+    kstartup-cron: "0 0 2 * * *"
+    public-institution-job-cron: "0 30 2 * * *"
+    qnet-cron: "0 0 3 * * *"

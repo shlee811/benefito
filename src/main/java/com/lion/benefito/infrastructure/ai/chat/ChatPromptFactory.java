@@ -21,25 +21,60 @@ public class ChatPromptFactory {
             6. 추천하는 공고의 원문 URL을 반드시 함께 제공하세요.
             7. Context에 사용자 질문과 관련된 공고가 없으면, 추측하지 말고 관련 공고를 찾지 못했다고 솔직하게 안내하세요.
             8. 한국어로 자연스럽고 간결하게 답변하세요.
+            9. [사용자 정보]가 제공되면 이를 참고하여 사용자에게 더 적합한 공고를 우선적으로 추천하세요.
             """;
 
     private static final String NO_RESULT_CONTEXT = "(검색 결과 없음)";
     private static final String UNKNOWN_VALUE = "정보 없음";
 
     public List<OpenAiChatMessage> createChatMessages(String question, List<PostingSimilarityResponse> searchResults) {
+        return createChatMessages(question, searchResults, null);
+    }
+
+    public List<OpenAiChatMessage> createChatMessages(String question, List<PostingSimilarityResponse> searchResults,
+            UserProfileContext userProfile) {
         if (question == null || question.isBlank()) {
             throw new ChatException(ChatErrorCode.INVALID_INPUT);
         }
 
-        String userPrompt = buildUserPrompt(question, searchResults);
+        String userPrompt = buildUserPrompt(question, searchResults, userProfile);
         return List.of(
                 new OpenAiChatMessage("system", SYSTEM_PROMPT),
                 new OpenAiChatMessage("user", userPrompt)
         );
     }
 
-    private String buildUserPrompt(String question, List<PostingSimilarityResponse> searchResults) {
-        return "[공고 목록]\n" + buildContext(searchResults) + "\n\n[사용자 질문]\n" + question;
+    private String buildUserPrompt(String question, List<PostingSimilarityResponse> searchResults,
+            UserProfileContext userProfile) {
+        String profileSection = buildUserProfileSection(userProfile);
+        String base = "[공고 목록]\n" + buildContext(searchResults) + "\n\n[사용자 질문]\n" + question;
+        return profileSection.isEmpty() ? base : profileSection + "\n\n" + base;
+    }
+
+    private String buildUserProfileSection(UserProfileContext userProfile) {
+        if (userProfile == null) {
+            return "";
+        }
+
+        StringBuilder section = new StringBuilder("[사용자 정보]\n");
+        boolean hasAny = false;
+        if (userProfile.grade() != null) {
+            section.append("- 학년: ").append(userProfile.grade()).append("\n");
+            hasAny = true;
+        }
+        if (userProfile.income() != null) {
+            section.append("- 소득: ").append(userProfile.income()).append("\n");
+            hasAny = true;
+        }
+        if (userProfile.regionName() != null) {
+            section.append("- 거주지역: ").append(userProfile.regionName()).append("\n");
+            hasAny = true;
+        }
+        if (userProfile.categoryNames() != null && !userProfile.categoryNames().isEmpty()) {
+            section.append("- 관심 카테고리: ").append(String.join(", ", userProfile.categoryNames())).append("\n");
+            hasAny = true;
+        }
+        return hasAny ? section.toString().stripTrailing() : "";
     }
 
     private String buildContext(List<PostingSimilarityResponse> searchResults) {

@@ -1,18 +1,23 @@
 package com.lion.benefito.domain.chatbot.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.lion.benefito.domain.chatbot.dto.request.ChatMessageRequest;
 import com.lion.benefito.domain.chatbot.dto.response.ChatMessageResponse;
+import com.lion.benefito.domain.chatbot.dto.response.ChatSessionCreateResponse;
 import com.lion.benefito.domain.chatbot.entity.ChatMessage;
 import com.lion.benefito.domain.chatbot.entity.ChatRole;
 import com.lion.benefito.domain.chatbot.entity.ChatSession;
+import com.lion.benefito.domain.chatbot.exception.ChatbotErrorCode;
+import com.lion.benefito.domain.chatbot.exception.ChatbotException;
 import com.lion.benefito.domain.chatbot.repository.ChatMessageRepository;
 import com.lion.benefito.domain.chatbot.repository.ChatSessionRepository;
 import com.lion.benefito.domain.posting.dto.PostingSimilarityResponse;
@@ -124,6 +129,67 @@ class ChatbotServiceTest {
         ChatMessageResponse response = chatbotService.sendMessage(1L, 10L, request);
 
         assertThat(response.message()).isEqualTo("관련 공고를 찾지 못했습니다.");
+    }
+
+    @Test
+    void createSession은_전달받은_실제_userId로_User를_조회해_세션에_저장한다() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        ChatSessionCreateResponse response = chatbotService.createSession(1L);
+
+        ArgumentCaptor<ChatSession> savedSession = ArgumentCaptor.forClass(ChatSession.class);
+        verify(chatSessionRepository).save(savedSession.capture());
+        assertThat(savedSession.getValue().getUser().getId()).isEqualTo(1L);
+        assertThat(response).isNotNull();
+    }
+
+    @Test
+    void 사용자_A가_사용자_B_소유_세션에_메시지를_보내면_접근이_차단된다() {
+        Long ownerUserId = 1L;
+        Long otherUserId = 2L;
+        ChatMessageRequest request = new ChatMessageRequest("질문", null);
+
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+
+        assertThatThrownBy(() -> chatbotService.sendMessage(otherUserId, 10L, request))
+                .isInstanceOf(ChatbotException.class)
+                .satisfies(ex -> assertThat(((ChatbotException) ex).getCode())
+                        .isEqualTo(ChatbotErrorCode.SESSION_ACCESS_DENIED));
+
+        verify(chatMessageRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void 사용자_A가_사용자_B_소유_세션의_메시지를_조회하면_접근이_차단된다() {
+        Long otherUserId = 2L;
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+
+        assertThatThrownBy(() -> chatbotService.getMessages(otherUserId, 10L))
+                .isInstanceOf(ChatbotException.class)
+                .satisfies(ex -> assertThat(((ChatbotException) ex).getCode())
+                        .isEqualTo(ChatbotErrorCode.SESSION_ACCESS_DENIED));
+
+        verify(chatMessageRepository, never()).findByChatSessionIdOrderByCreatedAtAscIdAsc(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void 소유자_본인이면_세션에_정상적으로_접근할_수_있다() {
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+        when(chatMessageRepository.findByChatSessionIdOrderByCreatedAtAscIdAsc(10L)).thenReturn(List.of());
+
+        List<ChatMessageResponse> messages = chatbotService.getMessages(1L, 10L);
+
+        assertThat(messages).isEmpty();
+    }
+
+    @Test
+    void 존재하지_않는_세션에_접근하면_SESSION_NOT_FOUND_예외() {
+        when(chatSessionRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatbotService.getMessages(1L, 999L))
+                .isInstanceOf(ChatbotException.class)
+                .satisfies(ex -> assertThat(((ChatbotException) ex).getCode())
+                        .isEqualTo(ChatbotErrorCode.SESSION_NOT_FOUND));
     }
 
     private void setId(Object entity, Long id) {

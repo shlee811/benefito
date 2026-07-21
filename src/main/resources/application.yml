@@ -69,3 +69,6 @@ external:
     # 1320 = 정보처리기사. 필요한 종목코드를 이 목록에 추가하면 코드 변경 없이 수집 대상이 늘어난다.
     target-codes:
       - "1320"
+
+  scholarship:
+    csv-path: classpath:data/scholarship.csv

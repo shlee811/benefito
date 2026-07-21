@@ -8,7 +8,9 @@ import java.time.LocalDate;
  * PostingMapper는 이 모델만 알면 되므로 소스가 늘어나도 이후 파이프라인은 그대로 재사용된다.
  *
  * category/region은 원본 문자열을 그대로 보존한다(Code 매핑은 PostingMapper의 책임).
- * recruitmentStartDate 등 Posting에 대응 컬럼이 없는 필드는 포함하지 않았다.
+ * startDate는 Posting 엔티티에 대응 컬럼이 없어 PostingMapper가 사용하지 않는다(저장되지 않음).
+ * 그래도 소스가 시작일 개념을 갖고 있다면 이 모델을 통해 전달만 해두면, 나중에 Posting에
+ * 컬럼이 추가될 때 소스 쪽 변경 없이 바로 활용할 수 있다. 시작일 개념이 없는 소스는 null로 둔다.
  */
 public record ExternalPostingData(
         String sourceType,
@@ -20,6 +22,7 @@ public record ExternalPostingData(
         String category,
         String region,
         String qualification,
+        LocalDate startDate,
         LocalDate deadline
 ) {
 }

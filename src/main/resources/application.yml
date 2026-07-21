@@ -72,3 +72,7 @@ external:
 
   scholarship:
     csv-path: classpath:data/scholarship.csv
+
+  seed:
+    # 공식 API/CSV가 없는 공모전(CONTEST)·대외활동(EXTRACURRICULAR) 시연용 시드 데이터.
+    csv-path: classpath:data/seed_contest_activity.csv

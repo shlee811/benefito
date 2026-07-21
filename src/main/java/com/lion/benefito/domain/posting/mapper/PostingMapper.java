@@ -26,7 +26,7 @@ public class PostingMapper {
     private final CodeRepository codeRepository;
 
     public Posting toNewPosting(ExternalPostingData data) {
-        Code categoryCode = resolveCategoryCode(data.sourceType());
+        Code categoryCode = resolveCategoryCode(data.sourceType(), data.category());
         Code regionCode = resolveRegionCode(data.region());
 
         return Posting.builder()
@@ -56,7 +56,7 @@ public class PostingMapper {
                 || !Objects.equals(codeId(posting.getRegionCode()), codeId(regionCode));
 
         if (changed) {
-            Code categoryCode = resolveCategoryCode(data.sourceType());
+            Code categoryCode = resolveCategoryCode(data.sourceType(), data.category());
             posting.updateFrom(categoryCode, regionCode, data.title(), data.organization(), data.content(),
                     data.deadline(), data.originalUrl(), data.qualification());
         }
@@ -64,13 +64,15 @@ public class PostingMapper {
         return changed;
     }
 
-    // 소스별 고정 카테고리 매핑. 새 소스가 추가되면 케이스만 추가하면 된다.
-    private Code resolveCategoryCode(String sourceType) {
+    // 대부분의 소스는 카테고리가 고정이라 sourceType만으로 결정되지만, SEED는 한 소스 안에
+    // 여러 카테고리(공모전/대외활동)가 섞여 있어 원본 category 값을 그대로 조회에 사용한다.
+    private Code resolveCategoryCode(String sourceType, String rawCategory) {
         String fixedCategoryCode = switch (sourceType) {
             case "KSTARTUP" -> "GOVERNMENT_SUPPORT";
             case "PUBLIC_INSTITUTION_JOB" -> "JOB";
             case "QNET" -> "CERTIFICATE";
             case "SCHOLARSHIP" -> "SCHOLARSHIP";
+            case "SEED" -> rawCategory;
             default -> throw new ExternalPostingException(ExternalPostingErrorCode.CATEGORY_CODE_NOT_CONFIGURED);
         };
 

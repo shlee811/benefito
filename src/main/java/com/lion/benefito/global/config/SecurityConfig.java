@@ -44,7 +44,7 @@ public class SecurityConfig {
             "/swagger-ui/**", // swagger 관련 URL
             "/api-docs/**",
             "/postings/**", // 공고 조회는 비회원도 가능해야 함(Issue #44)
-            "/api/v1/scraps/**",
+            "/scraps/posting/**", // 공고 별 스크랩 수 조회는 비회원도 가능하게
             "/api/v1/admin/external-postings/**" // 관리자 인증 미구현 상태의 개발 전용 API(external.admin-api.enabled=true일 때만 존재)
     };
     // 챗봇(/chatbot/**)은 위 목록에서 의도적으로 제외했다 - 로그인한 회원만 사용할 수 있어야 한다(Issue #44).

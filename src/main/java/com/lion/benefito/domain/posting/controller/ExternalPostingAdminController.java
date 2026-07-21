@@ -7,6 +7,7 @@ import com.lion.benefito.infrastructure.external.kstartup.KStartupPostingSource;
 import com.lion.benefito.infrastructure.external.publicinstitutionjob.PublicInstitutionJobPostingSource;
 import com.lion.benefito.infrastructure.external.qnet.QNetPostingSource;
 import com.lion.benefito.infrastructure.external.scholarship.ScholarshipPostingSource;
+import com.lion.benefito.infrastructure.external.seed.SeedPostingSource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ExternalPostingAdminController {
     private final PublicInstitutionJobPostingSource publicInstitutionJobPostingSource;
     private final QNetPostingSource qNetPostingSource;
     private final ScholarshipPostingSource scholarshipPostingSource;
+    private final SeedPostingSource seedPostingSource;
 
     @Operation(summary = "K-Startup 공고 수동 수집", description = "K-Startup 공고를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/kstartup/import")
@@ -56,6 +58,14 @@ public class ExternalPostingAdminController {
     @PostMapping("/api/v1/admin/external-postings/scholarship/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importScholarshipPostings() {
         ExternalPostingImportResponse response = externalPostingIngestService.importFrom(scholarshipPostingSource);
+        return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "공모전·대외활동 시드 데이터 수동 수집",
+            description = "공식 API/CSV가 없는 공모전·대외활동 시연용 시드 CSV를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
+    @PostMapping("/api/v1/admin/external-postings/seed/import")
+    public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importSeedPostings() {
+        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(seedPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 }

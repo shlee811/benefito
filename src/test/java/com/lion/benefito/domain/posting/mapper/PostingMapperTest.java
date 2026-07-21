@@ -63,6 +63,11 @@ class PostingMapperTest {
                 "https://example.com/1", null, null, "성적 3.0 이상", startDate, deadline);
     }
 
+    private ExternalPostingData seedData(String externalId, String rawCategory) {
+        return new ExternalPostingData("SEED", externalId, "테스트 공모전", "[시연용 샘플 데이터] 설명",
+                "테스트재단", null, rawCategory, null, "전국 대학생", null, null);
+    }
+
     @Test
     void 신규_공고는_카테고리가_GOVERNMENT_SUPPORT로_고정되고_지역명이_일치하면_regionCode가_매핑된다() {
         when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
@@ -128,6 +133,33 @@ class PostingMapperTest {
         assertThat(posting.getSourceType()).isEqualTo("SCHOLARSHIP");
         assertThat(posting.getRegionCode()).isNull();
         assertThat(posting.getEndDate()).isEqualTo(LocalDate.of(2026, 1, 31));
+    }
+
+    @Test
+    void SEED_소스는_CONTEST_카테고리로_직접_조회된다() {
+        Code contestCode = mock(Code.class);
+        when(contestCode.getId()).thenReturn(600L);
+        when(codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, "CONTEST"))
+                .thenReturn(Optional.of(contestCode));
+
+        Posting posting = postingMapper.toNewPosting(seedData("SEED-CONTEST-001", "CONTEST"));
+
+        assertThat(posting.getCategoryCode()).isEqualTo(contestCode);
+        assertThat(posting.getSourceType()).isEqualTo("SEED");
+        assertThat(posting.getExternalId()).isEqualTo("SEED-CONTEST-001");
+    }
+
+    @Test
+    void SEED_소스는_EXTRACURRICULAR_카테고리로도_직접_조회된다() {
+        Code extracurricularCode = mock(Code.class);
+        when(extracurricularCode.getId()).thenReturn(601L);
+        when(codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, "EXTRACURRICULAR"))
+                .thenReturn(Optional.of(extracurricularCode));
+
+        Posting posting = postingMapper.toNewPosting(seedData("SEED-ACTIVITY-001", "EXTRACURRICULAR"));
+
+        assertThat(posting.getCategoryCode()).isEqualTo(extracurricularCode);
+        assertThat(posting.getExternalId()).isEqualTo("SEED-ACTIVITY-001");
     }
 
     @Test

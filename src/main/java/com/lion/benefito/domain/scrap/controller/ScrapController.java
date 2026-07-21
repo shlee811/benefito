@@ -56,6 +56,16 @@ public class ScrapController {
         return CustomResponse.onSuccess(response);
     }
 
+    @Operation(summary = "공고별 스크랩 수 조회", description = "특정 공고가 스크랩된 총 횟수를 조회한다.")
+    @GetMapping("/posting/{postingId}/count")
+    public CustomResponse<ScrapResDTO.PostingScrapCount> getScrapCountByPosting(
+            @PathVariable Long postingId) {
+        
+        ScrapResDTO.PostingScrapCount response = scrapQueryService.getScrapCountByPosting(postingId);
+        
+        return CustomResponse.onSuccess(response);
+    }
+
     @Operation(summary = "공고 스크랩 추가", description = "로그인 사용자가 특정 공고를 스크랩한다.")
     @PostMapping("/{postingId}")
     public CustomResponse<String> addScrap(

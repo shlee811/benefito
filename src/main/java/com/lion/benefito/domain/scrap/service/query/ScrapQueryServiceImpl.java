@@ -117,4 +117,21 @@ public class ScrapQueryServiceImpl implements ScrapQueryService {
 
         return summary;
     }
+
+    @Override
+    public ScrapResDTO.PostingScrapCount getScrapCountByPosting(Long postingId) {
+
+        log.info("[ ScrapQueryService ] 특정 공고 스크랩 수 조회를 시작합니다. postingId={}", postingId);
+
+        long scrapCount = scrapRepository.countByPostingId(postingId);
+
+        ScrapResDTO.PostingScrapCount response = ScrapResDTO.PostingScrapCount.builder()
+                .postingId(postingId)
+                .scrapCount(scrapCount)
+                .build();
+
+        log.info("[ ScrapQueryService ] 특정 공고 스크랩 수 조회가 완료되었습니다. postingId={}, scrapCount={}", postingId, scrapCount);
+
+        return response;
+    }
 }

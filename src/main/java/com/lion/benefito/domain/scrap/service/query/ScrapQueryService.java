@@ -9,4 +9,6 @@ public interface ScrapQueryService {
     ScrapResDTO.MyScrapList getWeeklyDeadlineScrapList(Long userId, String categoryCode);
 
     ScrapResDTO.ScrapSummary getScrapSummary(Long userId);
+
+    ScrapResDTO.PostingScrapCount getScrapCountByPosting(Long postingId);
 }

@@ -31,4 +31,7 @@ public interface ScrapRepository extends JpaRepository<Scrap, Long> {
 
     // 내 스크랩 중 특정 마감일 기간 내에 해당하는 스크랩 수 카운트
     long countByUserIdAndPostingEndDateBetween(Long userId, java.time.LocalDate startDate, java.time.LocalDate endDate);
+
+    // 특정 공고의 총 스크랩 수 카운트
+    long countByPostingId(Long postingId);
 }

@@ -31,4 +31,11 @@ public class ScrapResDTO {
             Long weeklyDeadlineCount
     ) {
     }
+
+    @Builder
+    public record PostingScrapCount(
+            Long postingId,
+            Long scrapCount
+    ) {
+    }
 }

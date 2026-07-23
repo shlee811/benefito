@@ -28,6 +28,8 @@ public class QNetPostingSource implements ExternalPostingSource {
     private static final String SOURCE_TYPE = "QNET";
     private static final String FIXED_COMPANY = "한국산업인력공단";
     private static final String HOMEPAGE_URL = "https://www.q-net.or.kr";
+    // Q-Net 응답에는 지역 개념이 없어(전국 단위 시험) 지역 조건은 항상 "전국"으로 채운다.
+    private static final String NATIONWIDE_REGION = "전국";
     private static final DateTimeFormatter DEADLINE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
     private static final int QUALIFICATION_LIST_ROWS = 700;
 
@@ -117,7 +119,7 @@ public class QNetPostingSource implements ExternalPostingSource {
                 FIXED_COMPANY,
                 HOMEPAGE_URL,
                 null,
-                null,
+                NATIONWIDE_REGION,
                 buildQualification(item),
                 null,
                 parseDeadline(item.docRegEndDt())
@@ -152,9 +154,14 @@ public class QNetPostingSource implements ExternalPostingSource {
     }
 
     // Q-Net 응답엔 지원자격 텍스트가 없어, 가장 가까운 대안으로 대/중직무분야를 사용한다.
+    // 종목명(jmfldnm)은 항상 값이 있으므로 "분야" 태그로 맨 앞에 노출해 분야 정보가 비어 보이지 않게 한다.
     private String buildQualification(QNetScheduleItem item) {
-        String major = item.obligfldnm();
-        String middle = item.mdobligfldnm();
+        String fieldTag = "분야: " + item.jmfldnm();
+        String jobField = buildJobField(item.obligfldnm(), item.mdobligfldnm());
+        return jobField == null ? fieldTag : fieldTag + "\n" + jobField;
+    }
+
+    private String buildJobField(String major, String middle) {
         if (major == null || major.isBlank()) {
             return middle;
         }

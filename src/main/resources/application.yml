@@ -52,13 +52,15 @@ external:
     api-key: ${KSTARTUP_API_KEY:}
     per-page: 100
     # 실행 1회당 최대로 조회할 페이지 수. totalCount 기준으로도 조기 종료하지만, 이 값이 수집 범위의 상한이다.
-    max-pages: 5
+    # (사용자 결정: 전체 무제한 대신 상한은 유지하되 5→100페이지로 크게 늘려 최대 10,000건까지 수집한다.)
+    max-pages: 100
   public-institution-job:
     base-url: https://apis.data.go.kr/1051000/recruitment
     api-key: ${PUBLIC_INSTITUTION_JOB_API_KEY:}
     num-of-rows: 100
     # 실행 1회당 최대로 조회할 페이지 수. 전체 건수(totalCount)가 매우 커서(11만건 이상) 상한이 특히 중요하다.
-    max-pages: 5
+    # (사용자 결정: 전체 무제한 대신 상한은 유지하되 5→100페이지로 크게 늘려 최대 10,000건까지 수집한다.)
+    max-pages: 100
   qnet:
     base-url: http://openapi.q-net.or.kr/api/service/rest
     api-key: ${QNET_API_KEY:}
@@ -81,3 +83,5 @@ external:
     kstartup-cron: "0 0 2 * * *"
     public-institution-job-cron: "0 30 2 * * *"
     qnet-cron: "0 0 3 * * *"
+    # 마감일이 지난 공고를 CLOSED로 전환하는 소스 무관 일일 정리 작업.
+    close-expired-cron: "0 5 0 * * *"

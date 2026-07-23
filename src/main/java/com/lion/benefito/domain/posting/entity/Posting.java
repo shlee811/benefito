@@ -4,6 +4,8 @@ import com.lion.benefito.domain.code.entity.Code;
 import com.lion.benefito.global.common.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,6 +15,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,6 +30,13 @@ import lombok.NoArgsConstructor;
                 columnNames = {"source_type", "external_id"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Posting extends BaseTimeEntity {
+
+    // "추천 공고" 기준: 마감이 임박한(오늘부터 이 일수 이내) ACTIVE 공고.
+    // 조회수/관심사 기반 개인화는 근거로 삼을 만한 실사용 데이터가 아직 없어 이번에는 채택하지 않았고,
+    // 로그인 여부와 무관하게 공개 목록 조회(GET /postings)에서 그대로 동작해야 해서 마감 임박이라는
+    // 가장 단순하고 항상 계산 가능한 기준을 사용한다. PostingSpecification의 RECOMMENDED 필터도
+    // 이 값과 동일한 기준을 사용한다.
+    public static final int RECOMMENDED_DEADLINE_WITHIN_DAYS = 7;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -79,10 +90,23 @@ public class Posting extends BaseTimeEntity {
     @Column(name = "external_id")
     private String externalId;
 
+    // 외부 수집 데이터의 주요 필드를 해시로 압축한 값. 외부 소스를 재수집할 때 이 값만 비교해서
+    // 변경 여부를 판단한다(PostingMapper.computeContentHash 참고). 수동 등록 공고는 null이다.
+    @Column(name = "content_hash")
+    private String contentHash;
+
+    // 마감일이 지났거나(PostingMapper.resolveStatus) 외부 소스 목록에서 더 이상 조회되지 않으면(
+    // PostingRepository.closeMissingFromSource) CLOSED로 전환된다. 물리 삭제는 하지 않는다.
+    // columnDefinition에 DEFAULT를 명시해야 ddl-auto: update가 기존 행이 있는 테이블에도
+    // NOT NULL 컬럼을 추가할 수 있다(DEFAULT 없이는 Postgres가 ALTER TABLE 자체를 거부한다).
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'ACTIVE'")
+    private PostingStatus status;
+
     @Builder
     private Posting(Code categoryCode, Code regionCode, String title, String company, String content,
                      LocalDate endDate, String homepageUrl, String qualification,
-                     String sourceType, String externalId) {
+                     String sourceType, String externalId, String contentHash, PostingStatus status) {
         this.categoryCode = categoryCode;
         this.regionCode = regionCode;
         this.title = title;
@@ -94,11 +118,14 @@ public class Posting extends BaseTimeEntity {
         this.viewCount = 0L;
         this.sourceType = sourceType;
         this.externalId = externalId;
+        this.contentHash = contentHash;
+        this.status = status != null ? status : PostingStatus.ACTIVE;
     }
 
     // 외부 수집 공고의 변경된 필드를 갱신한다. 영속 상태의 엔티티에 호출해야 dirty checking으로 반영된다.
     public void updateFrom(Code categoryCode, Code regionCode, String title, String company, String content,
-                            LocalDate endDate, String homepageUrl, String qualification) {
+                            LocalDate endDate, String homepageUrl, String qualification, String contentHash,
+                            PostingStatus status) {
         this.categoryCode = categoryCode;
         this.regionCode = regionCode;
         this.title = title;
@@ -107,5 +134,30 @@ public class Posting extends BaseTimeEntity {
         this.endDate = endDate;
         this.homepageUrl = homepageUrl;
         this.qualification = qualification;
+        this.contentHash = contentHash;
+        this.status = status;
+    }
+
+    // 응답 DTO(PostingListResponse 등)에서 사용하는 파생 값이라 별도 컬럼으로 저장하지 않는다.
+    // 비로그인/관심사 없는 사용자를 위한 기본(비개인화) 판단. 마감 임박 여부만 본다.
+    public boolean isRecommended() {
+        return isRecommended(List.of());
+    }
+
+    // 로그인 사용자의 관심 카테고리 ID와 일치하면 우선 추천으로 간주하고, 그렇지 않으면 기존
+    // 마감 임박 기준으로 판단한다(기존 사용자에게도 동일하게 fallback으로 적용됨).
+    public boolean isRecommended(List<Long> interestCategoryIds) {
+        if (status != PostingStatus.ACTIVE) {
+            return false;
+        }
+        if (interestCategoryIds != null && categoryCode != null
+                && interestCategoryIds.contains(categoryCode.getId())) {
+            return true;
+        }
+        if (endDate == null) {
+            return false;
+        }
+        long daysUntilDeadline = ChronoUnit.DAYS.between(LocalDate.now(), endDate);
+        return daysUntilDeadline >= 0 && daysUntilDeadline <= RECOMMENDED_DEADLINE_WITHIN_DAYS;
     }
 }

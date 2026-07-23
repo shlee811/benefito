@@ -8,6 +8,7 @@ import com.lion.benefito.infrastructure.external.seed.SeedProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
@@ -16,8 +17,12 @@ import org.springframework.web.client.RestClient;
 public class ExternalApiConfig {
 
     // Q-Net은 XML 전용이라 JSON 전용 공유 RestClient.Builder 빈(SpringAiConfig)과 별도로 둔다.
+    // SpringAiConfig.restClientBuilder()와 동일한 이유로 connect/read timeout을 명시한다.
     @Bean
     public RestClient.Builder qnetRestClientBuilder() {
-        return RestClient.builder();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(10_000);
+        requestFactory.setReadTimeout(30_000);
+        return RestClient.builder().requestFactory(requestFactory);
     }
 }

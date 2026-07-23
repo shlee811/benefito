@@ -8,6 +8,7 @@ import com.lion.benefito.domain.posting.dto.PostingSearchCondition;
 import com.lion.benefito.domain.posting.entity.PostingFilter;
 import com.lion.benefito.domain.posting.entity.PostingSort;
 import com.lion.benefito.domain.posting.service.PostingService;
+import com.lion.benefito.global.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,8 +32,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PostingController {
 
     private final PostingService postingService;
+    private final CurrentUserProvider currentUserProvider;
 
-    @Operation(summary = "공고 목록 조회", description = "키워드 검색, 지역/카테고리 필터, 정렬, 추천 필터, 페이지네이션을 지원하는 공고 목록 조회")
+    @Operation(summary = "공고 목록 조회",
+            description = "키워드 검색, 지역/카테고리 필터, 정렬, 추천 필터, 페이지네이션을 지원하는 공고 목록 조회. "
+                    + "로그인 사용자가 filter=recommended로 조회하면 관심 카테고리와 일치하는 공고를 우선 반환하고, "
+                    + "부족하면 기존 마감임박 기준으로 채운다. 비로그인/관심사 미설정 사용자는 기존 기준만 적용된다.")
     @GetMapping("/postings")
     public ResponseEntity<PostingPageResponse> getPostings(
             @Parameter(description = "검색 키워드 (title, company 대상, 대소문자 무시)") @RequestParam(required = false) String keyword,
@@ -47,8 +52,9 @@ public class PostingController {
         PostingFilter postingFilter = PostingFilter.from(filter);
         PostingSearchCondition condition = new PostingSearchCondition(keyword, region, category, postingFilter);
         Pageable pageable = PageRequest.of(page, size, postingSort.toSort());
+        Long currentUserId = currentUserProvider.getCurrentUserIdOrEmpty().orElse(null);
 
-        return ResponseEntity.ok(postingService.getPostings(condition, pageable));
+        return ResponseEntity.ok(postingService.getPostings(condition, pageable, currentUserId));
     }
 
     @Operation(summary = "공고 상세 조회", description = "공고 ID로 상세 정보를 조회한다.")

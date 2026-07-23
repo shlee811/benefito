@@ -116,6 +116,17 @@ class ScholarshipPostingSourceTest {
     }
 
     @Test
+    void region은_항상_전국으로_채운다() {
+        when(reader.readAll()).thenReturn(List.of(row("1", "테스트재단", "생활비 장학금", "대학2학기", "해당없음",
+                "성적 3.0 이상", "중위소득 100% 이하", "1인당 100만원", "서울 거주자", "신청서",
+                "https://example.com/1", "2026-01-01", "2026-01-31")));
+
+        List<ExternalPostingData> result = source.fetchPostings();
+
+        assertThat(result.get(0).region()).isEqualTo("전국");
+    }
+
+    @Test
     void CSV_로드_자체가_실패하면_빈_리스트를_반환한다() {
         when(reader.readAll()).thenThrow(new RuntimeException("파일을 찾을 수 없음"));
 

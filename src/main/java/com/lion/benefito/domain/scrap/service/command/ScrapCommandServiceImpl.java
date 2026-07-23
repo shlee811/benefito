@@ -54,6 +54,7 @@ public class ScrapCommandServiceImpl implements ScrapCommandService {
                 .build();
 
         scrapRepository.save(scrap);
+        postingRepository.incrementScrapCount(postingId);
 
         log.info("[ ScrapCommandService ] 공고 스크랩이 성공적으로 추가되었습니다. scrapId={}", scrap.getId());
     }
@@ -77,6 +78,7 @@ public class ScrapCommandServiceImpl implements ScrapCommandService {
                 .orElseThrow(() -> new ScrapException(ScrapErrorCode.SCRAP_NOT_FOUND));
         
         scrapRepository.delete(scrap);
+        postingRepository.decrementScrapCount(postingId);
 
         log.info("[ ScrapCommandService ] 공고 스크랩이 성공적으로 취소되었습니다.");
     }

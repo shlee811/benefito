@@ -31,11 +31,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Posting extends BaseTimeEntity {
 
-    // "추천 공고" 기준: 마감이 임박한(오늘부터 이 일수 이내) ACTIVE 공고.
-    // 조회수/관심사 기반 개인화는 근거로 삼을 만한 실사용 데이터가 아직 없어 이번에는 채택하지 않았고,
-    // 로그인 여부와 무관하게 공개 목록 조회(GET /postings)에서 그대로 동작해야 해서 마감 임박이라는
-    // 가장 단순하고 항상 계산 가능한 기준을 사용한다. PostingSpecification의 RECOMMENDED 필터도
-    // 이 값과 동일한 기준을 사용한다.
+    // "추천 공고" 기준: 로그인 사용자는 관심 카테고리 일치 여부를 우선으로 보고(PostingService의
+    // 개인화 로직), 그 외에는 마감이 임박한(오늘부터 이 일수 이내) ACTIVE 공고를 기준으로 삼는다.
+    // 비로그인 사용자나 관심사가 없는 사용자에게는 이 마감 임박 기준만 적용된다.
     public static final int RECOMMENDED_DEADLINE_WITHIN_DAYS = 7;
 
     @Id
@@ -74,6 +72,13 @@ public class Posting extends BaseTimeEntity {
 
     @Column(nullable = false)
     private long viewCount;
+
+    // scraps 테이블의 실제 스크랩 수를 비정규화해 저장한 값. sort=popular 정렬 기준으로 쓰인다.
+    // Specification+Pageable/Sort 조합에서는 집계(서브쿼리) 기준 정렬을 표현할 수 없어(Pageable의
+    // Sort가 Specification 내부에서 설정한 orderBy를 덮어씀) viewCount와 동일한 방식으로 비정규화했다.
+    // ScrapCommandServiceImpl의 스크랩 추가/삭제 시점에 increment/decrementScrapCount로만 갱신한다.
+    @Column(name = "scrap_count", nullable = false, columnDefinition = "integer default 0")
+    private long scrapCount;
 
     // title/content 기반 임베딩 벡터. PostingRepository.updateEmbedding() 벌크 쿼리로만 갱신한다(viewCount와 동일한 방식).
     // insertable/updatable=false: Hibernate가 이 컬럼을 INSERT/UPDATE SQL에 포함시키면 String 파라미터를
@@ -116,6 +121,7 @@ public class Posting extends BaseTimeEntity {
         this.homepageUrl = homepageUrl;
         this.qualification = qualification;
         this.viewCount = 0L;
+        this.scrapCount = 0L;
         this.sourceType = sourceType;
         this.externalId = externalId;
         this.contentHash = contentHash;

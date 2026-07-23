@@ -10,5 +10,10 @@ public enum Income {
     INCOME_7,
     INCOME_8,
     INCOME_9,
-    INCOME_10
+    INCOME_10;
+
+    public String getDisplayName() {
+        String tier = name().substring("INCOME_".length());
+        return tier + "분위";
+    }
 }

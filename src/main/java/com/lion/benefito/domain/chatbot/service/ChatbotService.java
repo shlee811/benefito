@@ -14,10 +14,12 @@ import com.lion.benefito.domain.posting.dto.PostingSimilarityResponse;
 import com.lion.benefito.domain.user.entity.User;
 import com.lion.benefito.domain.user.exception.UserErrorCode;
 import com.lion.benefito.domain.user.exception.UserException;
+import com.lion.benefito.domain.user.repository.UserInterestRepository;
 import com.lion.benefito.domain.user.repository.UserRepository;
 import com.lion.benefito.infrastructure.ai.chat.AiChatClient;
 import com.lion.benefito.infrastructure.ai.chat.ChatPromptFactory;
 import com.lion.benefito.infrastructure.ai.chat.OpenAiChatMessage;
+import com.lion.benefito.infrastructure.ai.chat.UserProfileContext;
 import com.lion.benefito.infrastructure.ai.rag.PostingRetriever;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class ChatbotService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
+    private final UserInterestRepository userInterestRepository;
     private final AiChatClient aiChatClient;
     private final PostingRetriever postingRetriever;
     private final ChatPromptFactory chatPromptFactory;
@@ -66,7 +69,9 @@ public class ChatbotService {
         // 여기서 EmbeddingClient를 별도로 호출하지 않는다.
         List<PostingSimilarityResponse> searchResults =
                 postingRetriever.findSimilarPostings(request.message(), SIMILAR_POSTING_TOP_K);
-        List<OpenAiChatMessage> chatMessages = chatPromptFactory.createChatMessages(request.message(), searchResults);
+        UserProfileContext userProfile = buildUserProfileContext(userId);
+        List<OpenAiChatMessage> chatMessages =
+                chatPromptFactory.createChatMessages(request.message(), searchResults, userProfile);
         String reply = aiChatClient.generateReply(chatMessages);
 
         ChatMessage assistantMessage = ChatMessage.builder()
@@ -86,6 +91,21 @@ public class ChatbotService {
                 .stream()
                 .map(ChatMessageResponse::from)
                 .toList();
+    }
+
+    private UserProfileContext buildUserProfileContext(Long userId) {
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+
+        List<String> categoryNames = userInterestRepository.findByUserId(userId).stream()
+                .map(interest -> interest.getCategoryCode().getName())
+                .toList();
+
+        String gradeName = user.getGrade() != null ? user.getGrade().getDisplayName() : null;
+        String incomeName = user.getIncome() != null ? user.getIncome().getDisplayName() : null;
+        String regionName = user.getRegionCode() != null ? user.getRegionCode().getName() : null;
+
+        return new UserProfileContext(gradeName, incomeName, regionName, categoryNames);
     }
 
     private ChatSession getOwnedSession(Long userId, Long sessionId) {

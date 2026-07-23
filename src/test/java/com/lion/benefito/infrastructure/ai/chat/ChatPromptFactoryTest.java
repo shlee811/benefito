@@ -78,4 +78,50 @@ class ChatPromptFactoryTest {
         assertThat(userPrompt).contains("[공고 1]");
         assertThat(userPrompt).contains("정보 없음");
     }
+
+    @Test
+    void userProfile을_전달하지_않으면_기존과_동일하게_사용자_정보_섹션이_없다() {
+        List<OpenAiChatMessage> messages = chatPromptFactory.createChatMessages("질문", List.of());
+
+        assertThat(messages.get(1).content()).doesNotContain("[사용자 정보]");
+    }
+
+    @Test
+    void 관심사가_있는_사용자는_사용자_정보_섹션에_학년_소득_지역_관심카테고리가_모두_포함된다() {
+        UserProfileContext userProfile = new UserProfileContext(
+                "4학년", "3분위", "서울", List.of("장학금", "정부지원사업"));
+
+        List<OpenAiChatMessage> messages = chatPromptFactory.createChatMessages(
+                "질문", List.of(), userProfile);
+
+        String userPrompt = messages.get(1).content();
+        assertThat(userPrompt).contains("[사용자 정보]");
+        assertThat(userPrompt).contains("- 학년: 4학년");
+        assertThat(userPrompt).contains("- 소득: 3분위");
+        assertThat(userPrompt).contains("- 거주지역: 서울");
+        assertThat(userPrompt).contains("- 관심 카테고리: 장학금, 정부지원사업");
+    }
+
+    @Test
+    void 관심사가_없는_사용자는_관심_카테고리_라인만_생략되고_나머지_정보는_포함된다() {
+        UserProfileContext userProfile = new UserProfileContext("2학년", "정보 없음", "부산", List.of());
+
+        List<OpenAiChatMessage> messages = chatPromptFactory.createChatMessages(
+                "질문", List.of(), userProfile);
+
+        String userPrompt = messages.get(1).content();
+        assertThat(userPrompt).contains("[사용자 정보]");
+        assertThat(userPrompt).contains("- 학년: 2학년");
+        assertThat(userPrompt).doesNotContain("관심 카테고리");
+    }
+
+    @Test
+    void userProfile의_모든_필드가_비어있으면_사용자_정보_섹션_자체가_생략된다() {
+        UserProfileContext emptyProfile = new UserProfileContext(null, null, null, List.of());
+
+        List<OpenAiChatMessage> messages = chatPromptFactory.createChatMessages(
+                "질문", List.of(), emptyProfile);
+
+        assertThat(messages.get(1).content()).doesNotContain("[사용자 정보]");
+    }
 }

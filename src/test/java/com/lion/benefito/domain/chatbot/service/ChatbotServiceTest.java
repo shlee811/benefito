@@ -216,6 +216,86 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void 메시지를_보내면_세션의_messageCount가_증가하고_세션이_다시_저장된다() {
+        ChatMessageRequest request = new ChatMessageRequest("질문", null);
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+        when(postingRetriever.findSimilarPostings(anyString(), anyInt())).thenReturn(List.of());
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
+        when(chatPromptFactory.createChatMessages(anyString(), anyList(), any())).thenReturn(List.of());
+        when(aiChatClient.generateReply(anyList())).thenReturn("답변");
+
+        chatbotService.sendMessage(1L, 10L, request);
+
+        // 사용자 메시지 저장 후 1번, 어시스턴트 메시지 저장 후 1번 = 총 2번 touch되어 messageCount는 2가 된다.
+        verify(chatSessionRepository, org.mockito.Mockito.times(2)).save(chatSession);
+        assertThat(chatSession.getMessageCount()).isEqualTo(2);
+    }
+
+    @Test
+    void AI_호출이_실패해도_이미_저장된_사용자_메시지는_유지되고_어시스턴트_메시지는_저장되지_않는다() {
+        ChatMessageRequest request = new ChatMessageRequest("질문", null);
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+        when(postingRetriever.findSimilarPostings(anyString(), anyInt())).thenReturn(List.of());
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
+        when(chatPromptFactory.createChatMessages(anyString(), anyList(), any())).thenReturn(List.of());
+        when(aiChatClient.generateReply(anyList())).thenThrow(new RuntimeException("OpenAI 호출 실패"));
+
+        assertThatThrownBy(() -> chatbotService.sendMessage(1L, 10L, request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("OpenAI 호출 실패");
+
+        ArgumentCaptor<ChatMessage> savedMessages = ArgumentCaptor.forClass(ChatMessage.class);
+        verify(chatMessageRepository, org.mockito.Mockito.times(1)).save(savedMessages.capture());
+        assertThat(savedMessages.getValue().getRole()).isEqualTo(ChatRole.USER);
+        assertThat(savedMessages.getValue().getMessage()).isEqualTo("질문");
+        // 사용자 메시지 저장 시점의 touch까지는 일어났어야 한다(그 뒤 AI 호출에서 실패).
+        verify(chatSessionRepository, org.mockito.Mockito.times(1)).save(chatSession);
+    }
+
+    @Test
+    void getSessions은_최근_대화_순으로_조회하고_첫_메시지를_제목으로_사용한다() {
+        ChatSession sessionWithMessage = ChatSession.builder().user(user).build();
+        setId(sessionWithMessage, 20L);
+        ChatSession sessionWithoutMessage = ChatSession.builder().user(user).build();
+        setId(sessionWithoutMessage, 21L);
+
+        when(chatSessionRepository.findByUserIdOrderByUpdatedAtDesc(1L))
+                .thenReturn(List.of(sessionWithMessage, sessionWithoutMessage));
+        ChatMessage firstMessage = ChatMessage.builder()
+                .chatSession(sessionWithMessage).role(ChatRole.USER).message("장학금 추천해줘").build();
+        when(chatMessageRepository.findFirstByChatSessionIdOrderByCreatedAtAscIdAsc(20L))
+                .thenReturn(Optional.of(firstMessage));
+        when(chatMessageRepository.findFirstByChatSessionIdOrderByCreatedAtAscIdAsc(21L))
+                .thenReturn(Optional.empty());
+
+        List<com.lion.benefito.domain.chatbot.dto.response.ChatSessionListResponse> sessions =
+                chatbotService.getSessions(1L);
+
+        assertThat(sessions).hasSize(2);
+        assertThat(sessions.get(0).sessionId()).isEqualTo(20L);
+        assertThat(sessions.get(0).title()).isEqualTo("장학금 추천해줘");
+        assertThat(sessions.get(1).sessionId()).isEqualTo(21L);
+        assertThat(sessions.get(1).title()).isEqualTo("새 대화");
+    }
+
+    @Test
+    void getSessions은_첫_메시지가_길면_제목을_잘라서_말줄임표를_붙인다() {
+        ChatSession session = ChatSession.builder().user(user).build();
+        setId(session, 20L);
+        when(chatSessionRepository.findByUserIdOrderByUpdatedAtDesc(1L)).thenReturn(List.of(session));
+        String longMessage = "가나다라마바사아자차카파타하".repeat(3);
+        ChatMessage firstMessage = ChatMessage.builder()
+                .chatSession(session).role(ChatRole.USER).message(longMessage).build();
+        when(chatMessageRepository.findFirstByChatSessionIdOrderByCreatedAtAscIdAsc(20L))
+                .thenReturn(Optional.of(firstMessage));
+
+        List<com.lion.benefito.domain.chatbot.dto.response.ChatSessionListResponse> sessions =
+                chatbotService.getSessions(1L);
+
+        assertThat(sessions.get(0).title()).hasSize(33).endsWith("...");
+    }
+
+    @Test
     void createSession은_전달받은_실제_userId로_User를_조회해_세션에_저장한다() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 

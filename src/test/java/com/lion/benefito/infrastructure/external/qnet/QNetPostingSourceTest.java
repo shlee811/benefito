@@ -97,7 +97,7 @@ class QNetPostingSourceTest {
     }
 
     @Test
-    void qualification은_대직무분야와_중직무분야를_조합한다() {
+    void qualification은_분야_태그와_대직무분야_중직무분야_조합을_함께_담는다() {
         properties.setTargetCodes(List.of("1320"));
         when(client.fetchQualificationList(700, 1))
                 .thenReturn(qualificationList(new QNetQualificationItem("1320", "정보처리기사")));
@@ -105,7 +105,19 @@ class QNetPostingSourceTest {
 
         List<ExternalPostingData> result = source.fetchPostings();
 
-        assertThat(result.get(0).qualification()).isEqualTo("정보통신 > 정보기술");
+        assertThat(result.get(0).qualification()).isEqualTo("분야: 정보처리기사\n정보통신 > 정보기술");
+    }
+
+    @Test
+    void region은_항상_전국으로_채운다() {
+        properties.setTargetCodes(List.of("1320"));
+        when(client.fetchQualificationList(700, 1))
+                .thenReturn(qualificationList(new QNetQualificationItem("1320", "정보처리기사")));
+        when(client.fetchSchedule("1320")).thenReturn(scheduleResponse(scheduleItem("2026년 정기 기사 1회", "20260115")));
+
+        List<ExternalPostingData> result = source.fetchPostings();
+
+        assertThat(result.get(0).region()).isEqualTo("전국");
     }
 
     @Test

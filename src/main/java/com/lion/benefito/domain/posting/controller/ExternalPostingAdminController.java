@@ -36,28 +36,30 @@ public class ExternalPostingAdminController {
     @Operation(summary = "K-Startup 공고 수동 수집", description = "K-Startup 공고를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/kstartup/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importKStartupPostings() {
-        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(kStartupPostingSource);
+        ExternalPostingImportResponse response = externalPostingIngestService.sync("KSTARTUP", kStartupPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 
     @Operation(summary = "공공기관 채용정보 수동 수집", description = "공공기관 채용정보를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/public-institution-job/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importPublicInstitutionJobPostings() {
-        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(publicInstitutionJobPostingSource);
+        ExternalPostingImportResponse response =
+                externalPostingIngestService.sync("PUBLIC_INSTITUTION_JOB", publicInstitutionJobPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 
     @Operation(summary = "Q-Net 자격시험 일정 수동 수집", description = "설정된 target-codes 종목의 시험일정을 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/qnet/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importQNetPostings() {
-        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(qNetPostingSource);
+        ExternalPostingImportResponse response = externalPostingIngestService.sync("QNET", qNetPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 
     @Operation(summary = "장학금 CSV 수동 수집", description = "설정된 CSV 파일의 장학금 데이터를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/scholarship/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importScholarshipPostings() {
-        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(scholarshipPostingSource);
+        ExternalPostingImportResponse response =
+                externalPostingIngestService.sync("SCHOLARSHIP", scholarshipPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 
@@ -65,7 +67,7 @@ public class ExternalPostingAdminController {
             description = "공식 API/CSV가 없는 공모전·대외활동 시연용 시드 CSV를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/seed/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importSeedPostings() {
-        ExternalPostingImportResponse response = externalPostingIngestService.importFrom(seedPostingSource);
+        ExternalPostingImportResponse response = externalPostingIngestService.sync("SEED", seedPostingSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 }

@@ -3,6 +3,7 @@ package com.lion.benefito.domain.chatbot.controller;
 import com.lion.benefito.domain.chatbot.dto.request.ChatMessageRequest;
 import com.lion.benefito.domain.chatbot.dto.response.ChatMessageResponse;
 import com.lion.benefito.domain.chatbot.dto.response.ChatSessionCreateResponse;
+import com.lion.benefito.domain.chatbot.dto.response.ChatSessionListResponse;
 import com.lion.benefito.domain.chatbot.service.ChatbotService;
 import com.lion.benefito.global.common.CustomResponse;
 import com.lion.benefito.global.security.CurrentUserProvider;
@@ -48,6 +49,14 @@ public class ChatbotController {
     public ResponseEntity<CustomResponse<List<ChatMessageResponse>>> getMessages(@PathVariable Long sessionId) {
         Long userId = currentUserProvider.getCurrentUserId();
         List<ChatMessageResponse> response = chatbotService.getMessages(userId, sessionId);
+        return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "대화 세션 목록 조회", description = "로그인 사용자의 기존 대화 세션을 최근 대화 순으로 조회한다.")
+    @GetMapping("/chatbot/sessions")
+    public ResponseEntity<CustomResponse<List<ChatSessionListResponse>>> getSessions() {
+        Long userId = currentUserProvider.getCurrentUserId();
+        List<ChatSessionListResponse> response = chatbotService.getSessions(userId);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 }

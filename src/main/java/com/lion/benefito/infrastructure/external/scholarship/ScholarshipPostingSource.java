@@ -22,6 +22,8 @@ public class ScholarshipPostingSource implements ExternalPostingSource {
 
     private static final String SOURCE_TYPE = "SCHOLARSHIP";
     private static final String NOT_APPLICABLE = "해당없음";
+    // CSV에 지역 컬럼이 없어 지역 조건은 항상 "전국"으로 채운다(구체적인 거주지역 제한은 qualification 텍스트로 안내됨).
+    private static final String NATIONWIDE_REGION = "전국";
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private final ScholarshipCsvReader scholarshipCsvReader;
@@ -61,7 +63,7 @@ public class ScholarshipPostingSource implements ExternalPostingSource {
                 trimToNull(row.orgName()),
                 trimToNull(row.homepageUrl()),
                 null,
-                null,
+                NATIONWIDE_REGION,
                 buildQualification(row),
                 parseDate(row.recruitStartDate()),
                 parseDeadline(row.recruitEndDate())

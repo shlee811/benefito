@@ -12,6 +12,7 @@ import com.lion.benefito.domain.code.entity.Code;
 import com.lion.benefito.domain.code.entity.CommonCodeType;
 import com.lion.benefito.domain.code.repository.CodeRepository;
 import com.lion.benefito.domain.posting.entity.Posting;
+import com.lion.benefito.domain.posting.entity.PostingStatus;
 import com.lion.benefito.infrastructure.external.ExternalPostingData;
 import com.lion.benefito.infrastructure.external.ExternalPostingErrorCode;
 import com.lion.benefito.infrastructure.external.ExternalPostingException;
@@ -181,18 +182,7 @@ class PostingMapperTest {
     void 변경된_필드가_없으면_updateFrom을_호출하지_않고_false를_반환한다() {
         when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
                 .thenReturn(Optional.of(seoulCode));
-        Posting existing = Posting.builder()
-                .categoryCode(governmentSupportCode)
-                .regionCode(seoulCode)
-                .title("제목")
-                .company("회사")
-                .content("내용")
-                .endDate(LocalDate.of(2026, 8, 3))
-                .homepageUrl("https://k-startup.go.kr/1")
-                .qualification("누구나")
-                .sourceType("KSTARTUP")
-                .externalId("178584")
-                .build();
+        Posting existing = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.of(2026, 8, 3)));
 
         boolean changed = postingMapper.applyChanges(existing,
                 data("서울", "누구나", LocalDate.of(2026, 8, 3)));
@@ -202,48 +192,82 @@ class PostingMapperTest {
     }
 
     @Test
-    void 마감일이_바뀌면_변경으로_감지하고_필드를_갱신한다() {
+    void 마감일이_바뀌면_변경으로_감지하고_필드와_contentHash를_갱신한다() {
         when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
                 .thenReturn(Optional.of(seoulCode));
-        Posting existing = Posting.builder()
-                .categoryCode(governmentSupportCode)
-                .regionCode(seoulCode)
-                .title("제목")
-                .company("회사")
-                .content("내용")
-                .endDate(LocalDate.of(2026, 8, 3))
-                .homepageUrl("https://k-startup.go.kr/1")
-                .qualification("누구나")
-                .sourceType("KSTARTUP")
-                .externalId("178584")
-                .build();
+        Posting existing = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.of(2026, 8, 3)));
+        String originalHash = existing.getContentHash();
 
         boolean changed = postingMapper.applyChanges(existing,
                 data("서울", "누구나", LocalDate.of(2026, 9, 1)));
 
         assertThat(changed).isTrue();
         assertThat(existing.getEndDate()).isEqualTo(LocalDate.of(2026, 9, 1));
+        assertThat(existing.getContentHash()).isNotNull().isNotEqualTo(originalHash);
     }
 
     @Test
-    void 변경이_없으면_카테고리_공통코드_조회조차_하지_않는다() {
+    void 변경이_없으면_카테고리_공통코드를_다시_조회하지_않는다() {
         when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
                 .thenReturn(Optional.of(seoulCode));
-        Posting existing = Posting.builder()
-                .categoryCode(governmentSupportCode)
-                .regionCode(seoulCode)
-                .title("제목")
-                .company("회사")
-                .content("내용")
-                .endDate(LocalDate.of(2026, 8, 3))
-                .homepageUrl("https://k-startup.go.kr/1")
-                .qualification("누구나")
-                .sourceType("KSTARTUP")
-                .externalId("178584")
-                .build();
+        Posting existing = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.of(2026, 8, 3)));
+        // toNewPosting()에서 이미 한 번 호출됐으므로, 이후 호출 횟수 기준을 다시 잡는다.
+        org.mockito.Mockito.clearInvocations(codeRepository);
 
         postingMapper.applyChanges(existing, data("서울", "누구나", LocalDate.of(2026, 8, 3)));
 
         verify(codeRepository, never()).findByCodeTypeAndCode(any(), any());
+        verify(codeRepository, never()).findByCodeTypeAndName(any(), any());
+    }
+
+    @Test
+    void 신규_공고는_contentHash가_채워진다() {
+        when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
+                .thenReturn(Optional.of(seoulCode));
+
+        Posting posting = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.of(2026, 8, 3)));
+
+        assertThat(posting.getContentHash()).isNotNull().isNotBlank();
+    }
+
+    @Test
+    void 마감일이_미래이면_status는_ACTIVE다() {
+        when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
+                .thenReturn(Optional.of(seoulCode));
+
+        Posting posting = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.now().plusDays(1)));
+
+        assertThat(posting.getStatus()).isEqualTo(PostingStatus.ACTIVE);
+    }
+
+    @Test
+    void 마감일이_지났으면_status는_CLOSED다() {
+        when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
+                .thenReturn(Optional.of(seoulCode));
+
+        Posting posting = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.now().minusDays(1)));
+
+        assertThat(posting.getStatus()).isEqualTo(PostingStatus.CLOSED);
+    }
+
+    @Test
+    void 마감일이_없으면_status는_ACTIVE다() {
+        when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
+                .thenReturn(Optional.of(seoulCode));
+
+        Posting posting = postingMapper.toNewPosting(data("서울", "누구나", null));
+
+        assertThat(posting.getStatus()).isEqualTo(PostingStatus.ACTIVE);
+    }
+
+    @Test
+    void applyChanges로_마감일이_지나게_바뀌면_status가_CLOSED로_전환된다() {
+        when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
+                .thenReturn(Optional.of(seoulCode));
+        Posting existing = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.now().plusDays(1)));
+
+        postingMapper.applyChanges(existing, data("서울", "누구나", LocalDate.now().minusDays(1)));
+
+        assertThat(existing.getStatus()).isEqualTo(PostingStatus.CLOSED);
     }
 }

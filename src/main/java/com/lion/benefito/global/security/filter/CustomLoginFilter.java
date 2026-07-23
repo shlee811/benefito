@@ -83,7 +83,7 @@ public class CustomLoginFilter extends UsernamePasswordAuthenticationFilter {
         JwtDTO jwtDto = JwtDTO.builder()
                 .accessToken(jwtUtil.createJwtAccessToken(customUserDetails)) // access token 생성
                 .refreshToken(jwtUtil.createJwtRefreshToken(customUserDetails)) // refresh token 생성
-                .name(customUserDetails.getUser().getName()) // 닉네임 대용으로 이름을 함께 내려준다
+                .nickname(customUserDetails.getUser().getName()) // 닉네임 추가
                 .build();
 
         // CustomResponse 사용하여 응답 통일

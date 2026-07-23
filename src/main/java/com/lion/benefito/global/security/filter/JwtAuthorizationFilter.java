@@ -1,6 +1,9 @@
 package com.lion.benefito.global.security.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lion.benefito.domain.auth.exception.AuthErrorCode;
 import com.lion.benefito.domain.user.entity.User;
+import com.lion.benefito.global.common.CustomResponse;
 import com.lion.benefito.global.security.jwt.JwtUtil;
 import com.lion.benefito.global.security.userdetails.CustomUserDetails;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -69,17 +72,24 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             // 4. 토큰 만료 시 401 응답 처리
             logger.warn("[ JwtAuthorizationFilter ] accessToken 이 만료되었습니다.");
 
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("Access Token 이 만료되었습니다.");
+            writeAuthErrorResponse(response, AuthErrorCode.EXPIRED_TOKEN);
 
         } catch (SecurityException e) {
 
             // 로그아웃된 토큰 또는 잘못된 토큰 시 예외 처리 및 401 응답 처리 추가
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("유효하지 않은 요청(로그아웃 등)입니다.");
+            writeAuthErrorResponse(response, AuthErrorCode.INVALID_TOKEN);
         }
+    }
+
+    // JwtAuthenticationEntryPoint(인증 헤더 자체가 없는 경우)와 동일한 JSON 응답 형식(CustomResponse)을
+    // 사용한다. 이전에는 이 필터가 순수 텍스트로 응답해, "헤더 없음"과 "토큰 만료/무효" 두 401 상황의
+    // 응답 형식이 서로 달라 프론트에서 모든 401을 동일하게 JSON으로 파싱할 수 없는 문제가 있었다.
+    private void writeAuthErrorResponse(HttpServletResponse response, AuthErrorCode errorCode) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        response.setStatus(errorCode.getHttpStatus().value());
+        CustomResponse<Object> errorResponse = CustomResponse.onFailure(errorCode.getCode(), errorCode.getMessage(), null);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(response.getOutputStream(), errorResponse);
     }
 
     // Access Token을 바탕으로 인증 객체 생성 및 SecurityContext에 저장

@@ -33,6 +33,20 @@ public interface PostingRepository extends JpaRepository<Posting, Long>, JpaSpec
     @Query("UPDATE Posting p SET p.viewCount = p.viewCount + 1 WHERE p.id = :postingId")
     int incrementViewCount(@Param("postingId") Long postingId);
 
+    // 스크랩 추가/삭제 시 ScrapCommandServiceImpl에서 호출한다(viewCount와 동일한 방식).
+    // 호출부(ScrapCommandServiceImpl)가 이미 클래스 단위 @Transactional을 갖고 있어
+    // 여기서 별도로 @Transactional을 열 필요가 없다(incrementViewCount와 동일).
+    // flushAutomatically=true 필수: 이 벌크 쿼리 직전에 scrapRepository.save()/delete()로 생긴
+    // 아직 플러시되지 않은 변경이 있는데, clearAutomatically=true만 있으면 flush 없이 영속성
+    // 컨텍스트를 clear()해버려 그 변경(특히 삭제)이 DB에 반영되지 않고 유실된다.
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Posting p SET p.scrapCount = p.scrapCount + 1 WHERE p.id = :postingId")
+    int incrementScrapCount(@Param("postingId") Long postingId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Posting p SET p.scrapCount = p.scrapCount - 1 WHERE p.id = :postingId AND p.scrapCount > 0")
+    int decrementScrapCount(@Param("postingId") Long postingId);
+
     List<Posting> findByEmbeddingIsNull();
 
     // 외부 수집 공고의 중복 확인(sourceType + externalId)에 사용한다.

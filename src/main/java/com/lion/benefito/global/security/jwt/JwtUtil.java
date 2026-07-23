@@ -148,7 +148,8 @@ public class JwtUtil {
         // 4. 재발급
         return new JwtDTO(
                 createJwtAccessToken(userDetails),
-                createJwtRefreshToken(userDetails)
+                createJwtRefreshToken(userDetails),
+                userDetails.getUser().getName()
         );
     }
 

@@ -44,6 +44,11 @@ public class PostingMapper {
                 .startDate(data.startDate())
                 .homepageUrl(data.originalUrl())
                 .qualification(data.qualification())
+                .salary(data.salary())
+                .employmentType(data.employmentType())
+                .enterpriseType(data.enterpriseType())
+                .career(data.career())
+                .education(data.education())
                 .sourceType(data.sourceType())
                 .externalId(data.externalId())
                 .contentHash(computeContentHash(data))
@@ -61,8 +66,9 @@ public class PostingMapper {
             Code categoryCode = resolveCategoryCode(data.sourceType(), data.category());
             Code regionCode = resolveRegionCode(data.region());
             posting.updateFrom(categoryCode, regionCode, data.title(), data.organization(), data.content(),
-                    data.deadline(), data.startDate(), data.originalUrl(), data.qualification(), newHash,
-                    resolveStatus(data.deadline()));
+                    data.deadline(), data.startDate(), data.originalUrl(), data.qualification(),
+                    data.salary(), data.employmentType(), data.enterpriseType(), data.career(), data.education(),
+                    newHash, resolveStatus(data.deadline()));
         }
 
         return changed;
@@ -84,6 +90,11 @@ public class PostingMapper {
                 nullToEmpty(data.category()),
                 nullToEmpty(data.region()),
                 nullToEmpty(data.qualification()),
+                nullToEmpty(data.salary()),
+                nullToEmpty(data.employmentType()),
+                nullToEmpty(data.enterpriseType()),
+                nullToEmpty(data.career()),
+                nullToEmpty(data.education()),
                 String.valueOf(data.deadline()),
                 String.valueOf(data.startDate()));
         return sha256Hex(raw);
@@ -116,8 +127,9 @@ public class PostingMapper {
             case "PUBLIC_INSTITUTION_JOB" -> "JOB";
             case "QNET" -> "CERTIFICATE";
             case "SEED_QNET_SCHEDULE" -> "CERTIFICATE";
+            case "SEED_INTERN" -> "INTERN";
             case "SCHOLARSHIP" -> "SCHOLARSHIP";
-            case "SEED" -> rawCategory;
+            case "SEED", "RAG_TEST_SEED" -> rawCategory;
             default -> throw new ExternalPostingException(ExternalPostingErrorCode.CATEGORY_CODE_NOT_CONFIGURED);
         };
 

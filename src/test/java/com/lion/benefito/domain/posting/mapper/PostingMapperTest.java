@@ -205,6 +205,43 @@ class PostingMapperTest {
     }
 
     @Test
+    void RAG_TEST_SEED_소스는_SEED와_동일하게_원본_category값을_그대로_조회에_사용한다() {
+        Code jobCode = mock(Code.class);
+        when(jobCode.getId()).thenReturn(700L);
+        when(codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, "JOB"))
+                .thenReturn(Optional.of(jobCode));
+
+        ExternalPostingData data = new ExternalPostingData("RAG_TEST_SEED", "RAG-SEED-JOB-0001",
+                "백엔드 인턴", "설명", "라이언테크", null, "JOB", null, "취업준비생",
+                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 9, 1),
+                "월 250만원", "인턴", "스타트업", "신입", "대학 졸업예정자");
+
+        Posting posting = postingMapper.toNewPosting(data);
+
+        assertThat(posting.getCategoryCode()).isEqualTo(jobCode);
+        assertThat(posting.getSourceType()).isEqualTo("RAG_TEST_SEED");
+        assertThat(posting.getSalary()).isEqualTo("월 250만원");
+        assertThat(posting.getEmploymentType()).isEqualTo("인턴");
+        assertThat(posting.getEnterpriseType()).isEqualTo("스타트업");
+        assertThat(posting.getCareer()).isEqualTo("신입");
+        assertThat(posting.getEducation()).isEqualTo("대학 졸업예정자");
+    }
+
+    @Test
+    void salary_employmentType_enterpriseType_career_education이_없는_기존_소스는_전부_null로_저장된다() {
+        when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
+                .thenReturn(Optional.of(seoulCode));
+
+        Posting posting = postingMapper.toNewPosting(data("서울", "누구나", LocalDate.of(2026, 8, 3)));
+
+        assertThat(posting.getSalary()).isNull();
+        assertThat(posting.getEmploymentType()).isNull();
+        assertThat(posting.getEnterpriseType()).isNull();
+        assertThat(posting.getCareer()).isNull();
+        assertThat(posting.getEducation()).isNull();
+    }
+
+    @Test
     void 변경된_필드가_없으면_updateFrom을_호출하지_않고_false를_반환한다() {
         when(codeRepository.findByCodeTypeAndName(CommonCodeType.REGION, "서울"))
                 .thenReturn(Optional.of(seoulCode));

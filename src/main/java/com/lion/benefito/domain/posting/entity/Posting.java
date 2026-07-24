@@ -72,6 +72,14 @@ public class Posting extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String qualification;
 
+    // JOB 카테고리 상세 화면 표시용 경력/학력 조건. 채용 성격의 소스만 채우고(그 외 카테고리는 개념이
+    // 안 맞아 null), 기존 5개 컬럼(enterpriseType/employmentType/salary/qualification)과 동일하게
+    // 자유 형식 텍스트로 둔다(값 종류가 "경력무관", "신입 또는 경력 1년 이하"처럼 문장형이라 enum으로
+    // 제한하기 어렵다).
+    private String career;
+
+    private String education;
+
     private String homepageUrl;
 
     @Column(nullable = false)
@@ -115,6 +123,7 @@ public class Posting extends BaseTimeEntity {
     @Builder
     private Posting(Code categoryCode, Code regionCode, String title, String company, String content,
                      LocalDate endDate, LocalDate startDate, String homepageUrl, String qualification,
+                     String salary, String employmentType, String enterpriseType, String career, String education,
                      String sourceType, String externalId, String contentHash, PostingStatus status) {
         this.categoryCode = categoryCode;
         this.regionCode = regionCode;
@@ -125,6 +134,11 @@ public class Posting extends BaseTimeEntity {
         this.startDate = startDate;
         this.homepageUrl = homepageUrl;
         this.qualification = qualification;
+        this.salary = salary;
+        this.employmentType = employmentType;
+        this.enterpriseType = enterpriseType;
+        this.career = career;
+        this.education = education;
         this.viewCount = 0L;
         this.scrapCount = 0L;
         this.sourceType = sourceType;
@@ -136,6 +150,7 @@ public class Posting extends BaseTimeEntity {
     // 외부 수집 공고의 변경된 필드를 갱신한다. 영속 상태의 엔티티에 호출해야 dirty checking으로 반영된다.
     public void updateFrom(Code categoryCode, Code regionCode, String title, String company, String content,
                             LocalDate endDate, LocalDate startDate, String homepageUrl, String qualification,
+                            String salary, String employmentType, String enterpriseType, String career, String education,
                             String contentHash, PostingStatus status) {
         this.categoryCode = categoryCode;
         this.regionCode = regionCode;
@@ -146,6 +161,11 @@ public class Posting extends BaseTimeEntity {
         this.startDate = startDate;
         this.homepageUrl = homepageUrl;
         this.qualification = qualification;
+        this.salary = salary;
+        this.employmentType = employmentType;
+        this.enterpriseType = enterpriseType;
+        this.career = career;
+        this.education = education;
         this.contentHash = contentHash;
         this.status = status;
     }

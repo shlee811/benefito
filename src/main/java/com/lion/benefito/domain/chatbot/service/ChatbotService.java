@@ -210,6 +210,18 @@ public class ChatbotService {
         chatMessageRepository.delete(chatMessage);
     }
 
+    // 세션(대화방) 자체를 통째로 지운다 - 메시지창에 들어가지 않고 세션 목록에서 바로 삭제할 수 있게 한다.
+    // 메시지 수만큼 deleteByChatMessageId를 반복 호출하지 않고, 세션 단위 벌크 쿼리 2건(공고 카드 ->
+    // 메시지)으로 한 번에 지운 뒤 세션을 삭제한다. FK 제약이 없어 이 순서(자식 -> 부모)를 코드로 지켜야 한다.
+    @Transactional
+    public void deleteSession(Long userId, Long sessionId) {
+        ChatSession chatSession = getOwnedSession(userId, sessionId);
+
+        chatMessagePostingRepository.deleteByChatSessionId(sessionId);
+        chatMessageRepository.deleteByChatSessionId(sessionId);
+        chatSessionRepository.delete(chatSession);
+    }
+
     private ChatSession getOwnedSession(Long userId, Long sessionId) {
         ChatSession chatSession = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ChatbotException(ChatbotErrorCode.SESSION_NOT_FOUND));

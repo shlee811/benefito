@@ -6,6 +6,8 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      - SPRING_DATA_REDIS_HOST=benefito-redis
     depends_on:
       - benefito-redis
     restart: unless-stopped

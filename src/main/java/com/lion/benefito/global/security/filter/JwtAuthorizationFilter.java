@@ -53,11 +53,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             }
 
             // [블랙리스트 검증 로직 추가]: Redis에 해당 Access Token이 존재하면 로그아웃된 토큰이므로 즉시 거부
-            if (redisTemplate.hasKey(accessToken)) {
-
-                log.warn("[JwtAuthorizationFilter] 로그아웃 처리된 Access Token의 접근입니다.");
-
-                throw new SecurityException("로그아웃된 토큰입니다.");
+            try {
+                if (redisTemplate.hasKey(accessToken)) {
+                    log.warn("[JwtAuthorizationFilter] 로그아웃 처리된 Access Token의 접근입니다.");
+                    throw new SecurityException("로그아웃된 토큰입니다.");
+                }
+            } catch (org.springframework.data.redis.RedisConnectionFailureException e) {
+                log.error("Redis 연결 실패로 토큰 블랙리스트 검증을 건너뜁니다.");
             }
 
             // 3. Access Token을 이용한 인증 처리

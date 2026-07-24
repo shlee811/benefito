@@ -42,7 +42,9 @@ public class SecurityConfig {
             "/auth/reissue", // 토큰 재발급은 인증이 필요하지 않음
             "/auth/check-id", // 아이디 중복 검사는 인증이 필요하지 않음
             "/swagger-ui/**", // swagger 관련 URL
+            "/swagger-ui.html", // swagger html
             "/api-docs/**",
+            "/v3/api-docs/**",
             "/postings/**", // 공고 조회는 비회원도 가능해야 함(Issue #44)
             "/scraps/posting/**", // 공고 별 스크랩 수 조회는 비회원도 가능하게
             "/api/v1/admin/external-postings/**" // 관리자 인증 미구현 상태의 개발 전용 API(external.admin-api.enabled=true일 때만 존재)

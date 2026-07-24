@@ -69,4 +69,12 @@ public class ChatbotController {
         chatbotService.deleteMessage(userId, sessionId, messageId);
         return ResponseEntity.ok(CustomResponse.onSuccess(null));
     }
+
+    @Operation(summary = "대화 세션 삭제", description = "세션(대화방)을 메시지창에 들어가지 않고 세션 목록에서 통째로 삭제한다.")
+    @DeleteMapping("/chatbot/sessions/{sessionId}")
+    public ResponseEntity<CustomResponse<Void>> deleteSession(@PathVariable Long sessionId) {
+        Long userId = currentUserProvider.getCurrentUserId();
+        chatbotService.deleteSession(userId, sessionId);
+        return ResponseEntity.ok(CustomResponse.onSuccess(null));
+    }
 }

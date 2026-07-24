@@ -64,10 +64,8 @@ external:
   qnet:
     base-url: http://openapi.q-net.or.kr/api/service/rest
     api-key: ${QNET_API_KEY:}
-    # 종목 목록(jmCd) 중 시험일정을 실제로 수집할 대상만 지정한다(getJMList는 jmCd 없이 전체 조회가 불가능).
-    # 1320 = 정보처리기사. 필요한 종목코드를 이 목록에 추가하면 코드 변경 없이 수집 대상이 늘어난다.
-    target-codes:
-      - "1320"
+    # getList(종목 목록 조회)로 국가자격 전체 종목을 받아 T/C/W/S(QNetPostingSource의
+    # QUALGB_CODES)에 해당하는 것만 골라, 종목별로 getJMList(시험일정 조회)를 호출한다.
 
   scholarship:
     csv-path: classpath:data/scholarship.csv

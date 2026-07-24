@@ -4,14 +4,18 @@ import com.lion.benefito.domain.chatbot.dto.request.ChatMessageRequest;
 import com.lion.benefito.domain.chatbot.dto.response.ChatMessageResponse;
 import com.lion.benefito.domain.chatbot.dto.response.ChatSessionCreateResponse;
 import com.lion.benefito.domain.chatbot.dto.response.ChatSessionListResponse;
+import com.lion.benefito.domain.chatbot.dto.response.PostingCardResponse;
 import com.lion.benefito.domain.chatbot.entity.ChatMessage;
+import com.lion.benefito.domain.chatbot.entity.ChatMessagePosting;
 import com.lion.benefito.domain.chatbot.entity.ChatRole;
 import com.lion.benefito.domain.chatbot.entity.ChatSession;
 import com.lion.benefito.domain.chatbot.exception.ChatbotErrorCode;
 import com.lion.benefito.domain.chatbot.exception.ChatbotException;
+import com.lion.benefito.domain.chatbot.repository.ChatMessagePostingRepository;
 import com.lion.benefito.domain.chatbot.repository.ChatMessageRepository;
 import com.lion.benefito.domain.chatbot.repository.ChatSessionRepository;
 import com.lion.benefito.domain.posting.dto.PostingSimilarityResponse;
+import com.lion.benefito.domain.posting.repository.PostingRepository;
 import com.lion.benefito.domain.user.entity.User;
 import com.lion.benefito.domain.user.exception.UserErrorCode;
 import com.lion.benefito.domain.user.exception.UserException;
@@ -22,7 +26,11 @@ import com.lion.benefito.infrastructure.ai.chat.ChatPromptFactory;
 import com.lion.benefito.infrastructure.ai.chat.OpenAiChatMessage;
 import com.lion.benefito.infrastructure.ai.chat.UserProfileContext;
 import com.lion.benefito.infrastructure.ai.rag.PostingRetriever;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +51,8 @@ public class ChatbotService {
     private final AiChatClient aiChatClient;
     private final PostingRetriever postingRetriever;
     private final ChatPromptFactory chatPromptFactory;
+    private final PostingRepository postingRepository;
+    private final ChatMessagePostingRepository chatMessagePostingRepository;
 
     @Transactional
     public ChatSessionCreateResponse createSession(Long userId) {
@@ -92,16 +102,54 @@ public class ChatbotService {
         chatMessageRepository.save(assistantMessage);
         touchSession(chatSession);
 
-        return ChatMessageResponse.from(assistantMessage);
+        // 프롬프트 조립에 쓴 searchResults 중, AI가 실제로 답변 본문에서 이름을 언급한 공고만 카드로
+        // 남긴다(별도 조회 없이 같은 RAG 검색 결과 안에서만 고른다) - 검색은 됐지만 답변에서 언급되지
+        // 않은 후보까지 카드로 노출되는 것을 막기 위함이다.
+        List<PostingSimilarityResponse> mentionedResults = searchResults.stream()
+                .filter(posting -> isMentionedInReply(posting, reply))
+                .toList();
+        List<PostingCardResponse> postingCards = mentionedResults.stream()
+                .map(PostingCardResponse::from)
+                .toList();
+        savePostingCards(assistantMessage, mentionedResults);
+
+        return ChatMessageResponse.from(assistantMessage, postingCards);
+    }
+
+    private boolean isMentionedInReply(PostingSimilarityResponse posting, String reply) {
+        return posting.title() != null && !posting.title().isBlank() && reply.contains(posting.title());
     }
 
     public List<ChatMessageResponse> getMessages(Long userId, Long sessionId) {
         getOwnedSession(userId, sessionId);
 
-        return chatMessageRepository.findByChatSessionIdOrderByCreatedAtAscIdAsc(sessionId)
+        List<ChatMessage> messages = chatMessageRepository.findByChatSessionIdOrderByCreatedAtAscIdAsc(sessionId);
+        Map<Long, List<PostingCardResponse>> postingsByMessageId = chatMessagePostingRepository
+                .findByChatSessionIdOrderByChatMessageIdAscDisplayOrderAsc(sessionId)
                 .stream()
-                .map(ChatMessageResponse::from)
+                .collect(Collectors.groupingBy(
+                        cmp -> cmp.getChatMessage().getId(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(cmp -> PostingCardResponse.from(cmp.getPosting()), Collectors.toList())));
+
+        return messages.stream()
+                .map(message -> ChatMessageResponse.from(
+                        message, postingsByMessageId.getOrDefault(message.getId(), List.of())))
                 .toList();
+    }
+
+    // RAG 검색 결과(유사도 순)를 순서 그대로 저장해, getMessages()로 다시 조회할 때도 같은 카드 목록을
+    // 같은 순서로 복원할 수 있게 한다.
+    private void savePostingCards(ChatMessage assistantMessage, List<PostingSimilarityResponse> searchResults) {
+        List<ChatMessagePosting> chatMessagePostings = new ArrayList<>();
+        for (int i = 0; i < searchResults.size(); i++) {
+            chatMessagePostings.add(ChatMessagePosting.builder()
+                    .chatMessage(assistantMessage)
+                    .posting(postingRepository.getReferenceById(searchResults.get(i).postingId()))
+                    .displayOrder(i)
+                    .build());
+        }
+        chatMessagePostingRepository.saveAll(chatMessagePostings);
     }
 
     // 로그인 사용자의 세션 목록을 최근 대화(마지막 메시지 기준) 순으로 반환한다.
@@ -146,6 +194,20 @@ public class ChatbotService {
         String regionName = user.getRegionCode() != null ? user.getRegionCode().getName() : null;
 
         return new UserProfileContext(gradeName, incomeName, regionName, categoryNames);
+    }
+
+    // 세션 안의 메시지 1건만 지운다. FK 제약이 없어 참조 무결성이 DB 레벨에서 보장되지 않으므로,
+    // 자식(ChatMessagePosting) -> 부모(ChatMessage) 순서로 직접 삭제한다.
+    @Transactional
+    public void deleteMessage(Long userId, Long sessionId, Long messageId) {
+        getOwnedSession(userId, sessionId);
+
+        ChatMessage chatMessage = chatMessageRepository.findById(messageId)
+                .filter(message -> message.getChatSession().getId().equals(sessionId))
+                .orElseThrow(() -> new ChatbotException(ChatbotErrorCode.MESSAGE_NOT_FOUND));
+
+        chatMessagePostingRepository.deleteByChatMessageId(messageId);
+        chatMessageRepository.delete(chatMessage);
     }
 
     private ChatSession getOwnedSession(Long userId, Long sessionId) {

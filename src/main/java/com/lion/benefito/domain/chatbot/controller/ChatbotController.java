@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,5 +59,14 @@ public class ChatbotController {
         Long userId = currentUserProvider.getCurrentUserId();
         List<ChatSessionListResponse> response = chatbotService.getSessions(userId);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "메시지 삭제", description = "세션 안의 특정 메시지 1건을 삭제한다.")
+    @DeleteMapping("/chatbot/sessions/{sessionId}/messages/{messageId}")
+    public ResponseEntity<CustomResponse<Void>> deleteMessage(
+            @PathVariable Long sessionId, @PathVariable Long messageId) {
+        Long userId = currentUserProvider.getCurrentUserId();
+        chatbotService.deleteMessage(userId, sessionId, messageId);
+        return ResponseEntity.ok(CustomResponse.onSuccess(null));
     }
 }

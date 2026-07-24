@@ -15,15 +15,20 @@ import static org.mockito.Mockito.when;
 import com.lion.benefito.domain.chatbot.dto.request.ChatMessageRequest;
 import com.lion.benefito.domain.chatbot.dto.response.ChatMessageResponse;
 import com.lion.benefito.domain.chatbot.dto.response.ChatSessionCreateResponse;
+import com.lion.benefito.domain.chatbot.dto.response.PostingCardResponse;
 import com.lion.benefito.domain.chatbot.entity.ChatMessage;
+import com.lion.benefito.domain.chatbot.entity.ChatMessagePosting;
 import com.lion.benefito.domain.chatbot.entity.ChatRole;
 import com.lion.benefito.domain.chatbot.entity.ChatSession;
 import com.lion.benefito.domain.chatbot.exception.ChatbotErrorCode;
 import com.lion.benefito.domain.chatbot.exception.ChatbotException;
+import com.lion.benefito.domain.chatbot.repository.ChatMessagePostingRepository;
 import com.lion.benefito.domain.chatbot.repository.ChatMessageRepository;
 import com.lion.benefito.domain.chatbot.repository.ChatSessionRepository;
 import com.lion.benefito.domain.code.entity.Code;
 import com.lion.benefito.domain.posting.dto.PostingSimilarityResponse;
+import com.lion.benefito.domain.posting.entity.Posting;
+import com.lion.benefito.domain.posting.repository.PostingRepository;
 import com.lion.benefito.domain.user.entity.User;
 import com.lion.benefito.domain.user.entity.UserInterest;
 import com.lion.benefito.domain.user.enums.Grade;
@@ -63,6 +68,10 @@ class ChatbotServiceTest {
     private PostingRetriever postingRetriever;
     @Mock
     private ChatPromptFactory chatPromptFactory;
+    @Mock
+    private PostingRepository postingRepository;
+    @Mock
+    private ChatMessagePostingRepository chatMessagePostingRepository;
 
     private ChatbotService chatbotService;
 
@@ -73,7 +82,7 @@ class ChatbotServiceTest {
     void setUp() {
         chatbotService = new ChatbotService(
                 chatSessionRepository, chatMessageRepository, userRepository, userInterestRepository, aiChatClient,
-                postingRetriever, chatPromptFactory);
+                postingRetriever, chatPromptFactory, postingRepository, chatMessagePostingRepository);
 
         user = User.builder().build();
         setId(user, 1L);
@@ -85,7 +94,8 @@ class ChatbotServiceTest {
     void sendMessage는_RAG_검색_프롬프트_조립_AI_호출_순서로_동작하고_메시지를_저장한다() {
         ChatMessageRequest request = new ChatMessageRequest("서울 지역 장학금을 추천해줘", null);
         List<PostingSimilarityResponse> searchResults = List.of(
-                new PostingSimilarityResponse(1L, "국가장학금", "내용", "SCHOLARSHIP", "https://example.com/1", 0.9));
+                new PostingSimilarityResponse(1L, "국가장학금", "내용", "SCHOLARSHIP", "정부", "SEOUL",
+                        java.time.LocalDate.of(2026, 8, 31), "https://example.com/1", 0.9));
         List<OpenAiChatMessage> promptMessages = List.of(
                 new OpenAiChatMessage("system", "sys"), new OpenAiChatMessage("user", "user"));
 
@@ -95,12 +105,26 @@ class ChatbotServiceTest {
         when(chatPromptFactory.createChatMessages(
                 eq("서울 지역 장학금을 추천해줘"), eq(searchResults), any(UserProfileContext.class)))
                 .thenReturn(promptMessages);
-        when(aiChatClient.generateReply(promptMessages)).thenReturn("장학금 추천 답변입니다.");
+        when(aiChatClient.generateReply(promptMessages)).thenReturn("국가장학금을 추천드립니다. 신청해보세요.");
+        Posting posting = mock(Posting.class);
+        when(postingRepository.getReferenceById(1L)).thenReturn(posting);
 
         ChatMessageResponse response = chatbotService.sendMessage(1L, 10L, request);
 
-        assertThat(response.message()).isEqualTo("장학금 추천 답변입니다.");
+        assertThat(response.message()).isEqualTo("국가장학금을 추천드립니다. 신청해보세요.");
         assertThat(response.role()).isEqualTo(ChatRole.ASSISTANT);
+
+        // 답변 아래 카드는 프롬프트 조립에 쓴 것과 동일한 searchResults 중, 답변 본문에서 실제로
+        // 이름이 언급된 것만 남아야 한다(별도 조회 결과가 아니라 같은 RAG 검색 결과 안에서만 고른 것).
+        assertThat(response.postings()).hasSize(1);
+        PostingCardResponse card = response.postings().get(0);
+        assertThat(card.postingId()).isEqualTo(1L);
+        assertThat(card.title()).isEqualTo("국가장학금");
+        assertThat(card.organization()).isEqualTo("정부");
+        assertThat(card.categoryCode()).isEqualTo("SCHOLARSHIP");
+        assertThat(card.region()).isEqualTo("SEOUL");
+        assertThat(card.deadline()).isEqualTo(java.time.LocalDate.of(2026, 8, 31));
+        assertThat(card.link()).isEqualTo("https://example.com/1");
 
         verify(postingRetriever).findSimilarPostings("서울 지역 장학금을 추천해줘", TOP_K);
         verify(chatPromptFactory).createChatMessages(
@@ -113,7 +137,81 @@ class ChatbotServiceTest {
         assertThat(captured.get(0).getRole()).isEqualTo(ChatRole.USER);
         assertThat(captured.get(0).getMessage()).isEqualTo("서울 지역 장학금을 추천해줘");
         assertThat(captured.get(1).getRole()).isEqualTo(ChatRole.ASSISTANT);
-        assertThat(captured.get(1).getMessage()).isEqualTo("장학금 추천 답변입니다.");
+        assertThat(captured.get(1).getMessage()).isEqualTo("국가장학금을 추천드립니다. 신청해보세요.");
+
+        // 답변 본문에서 언급된 공고만 DB에도 저장되어야 getMessages()로 다시 조회할 때도
+        // 같은 카드가 복원된다.
+        ArgumentCaptor<List<ChatMessagePosting>> savedPostingsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(chatMessagePostingRepository).saveAll(savedPostingsCaptor.capture());
+        List<ChatMessagePosting> savedChatMessagePostings = savedPostingsCaptor.getValue();
+        assertThat(savedChatMessagePostings).hasSize(1);
+        assertThat(savedChatMessagePostings.get(0).getPosting()).isEqualTo(posting);
+        assertThat(savedChatMessagePostings.get(0).getDisplayOrder()).isEqualTo(0);
+        assertThat(savedChatMessagePostings.get(0).getChatMessage()).isEqualTo(captured.get(1));
+    }
+
+    @Test
+    void 서로_다른_질문은_서로_다른_RAG_검색_결과가_그대로_카드로_반환된다() {
+        List<OpenAiChatMessage> promptMessages = List.of(new OpenAiChatMessage("system", "sys"));
+
+        ChatMessageRequest itRequest = new ChatMessageRequest("IT 공모전 추천해줘", null);
+        List<PostingSimilarityResponse> itResults = List.of(
+                new PostingSimilarityResponse(101L, "전국 대학생 빅데이터 분석 공모전", "내용", "CONTEST", "라이언데이터", "전국",
+                        java.time.LocalDate.of(2026, 9, 1), "https://example.com/101", 0.95));
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+        when(postingRetriever.findSimilarPostings("IT 공모전 추천해줘", TOP_K)).thenReturn(itResults);
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
+        when(chatPromptFactory.createChatMessages(eq("IT 공모전 추천해줘"), eq(itResults), any()))
+                .thenReturn(promptMessages);
+        when(aiChatClient.generateReply(promptMessages)).thenReturn("전국 대학생 빅데이터 분석 공모전을 추천드립니다.");
+        when(postingRepository.getReferenceById(101L)).thenReturn(mock(Posting.class));
+
+        ChatMessageResponse itResponse = chatbotService.sendMessage(1L, 10L, itRequest);
+
+        ChatMessageRequest envRequest = new ChatMessageRequest("환경 공모전 추천해줘", null);
+        List<PostingSimilarityResponse> envResults = List.of(
+                new PostingSimilarityResponse(202L, "탄소중립 아이디어 공모전", "내용", "CONTEST", "환경부", "전국",
+                        java.time.LocalDate.of(2026, 10, 1), "https://example.com/202", 0.9));
+        when(postingRetriever.findSimilarPostings("환경 공모전 추천해줘", TOP_K)).thenReturn(envResults);
+        when(chatPromptFactory.createChatMessages(eq("환경 공모전 추천해줘"), eq(envResults), any()))
+                .thenReturn(promptMessages);
+        when(aiChatClient.generateReply(promptMessages)).thenReturn("탄소중립 아이디어 공모전을 추천드립니다.");
+        when(postingRepository.getReferenceById(202L)).thenReturn(mock(Posting.class));
+
+        ChatMessageResponse envResponse = chatbotService.sendMessage(1L, 10L, envRequest);
+
+        assertThat(itResponse.postings()).extracting(PostingCardResponse::postingId).containsExactly(101L);
+        assertThat(envResponse.postings()).extracting(PostingCardResponse::postingId).containsExactly(202L);
+        // 질문이 바뀌면 이전 질문의 카드가 이어서 남아있지 않고 새 응답으로 완전히 교체되어야 한다.
+        assertThat(envResponse.postings()).extracting(PostingCardResponse::postingId).doesNotContain(101L);
+    }
+
+    @Test
+    void RAG로_검색됐지만_답변_본문에서_이름이_언급되지_않은_공고는_카드로_표시되지_않는다() {
+        ChatMessageRequest request = new ChatMessageRequest("공모전 추천해줘", null);
+        List<PostingSimilarityResponse> searchResults = List.of(
+                new PostingSimilarityResponse(1L, "언급된 공모전", "내용", "CONTEST", "주최사A", "전국", null,
+                        "https://example.com/1", 0.9),
+                new PostingSimilarityResponse(2L, "언급되지 않은 공모전", "내용", "CONTEST", "주최사B", "전국", null,
+                        "https://example.com/2", 0.8));
+        List<OpenAiChatMessage> promptMessages = List.of(new OpenAiChatMessage("system", "sys"));
+
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+        when(postingRetriever.findSimilarPostings("공모전 추천해줘", TOP_K)).thenReturn(searchResults);
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
+        when(chatPromptFactory.createChatMessages(eq("공모전 추천해줘"), eq(searchResults), any()))
+                .thenReturn(promptMessages);
+        when(aiChatClient.generateReply(promptMessages)).thenReturn("언급된 공모전을 추천드립니다.");
+        when(postingRepository.getReferenceById(1L)).thenReturn(mock(Posting.class));
+
+        ChatMessageResponse response = chatbotService.sendMessage(1L, 10L, request);
+
+        assertThat(response.postings()).extracting(PostingCardResponse::title).containsExactly("언급된 공모전");
+        verify(postingRepository, never()).getReferenceById(2L);
+
+        ArgumentCaptor<List<ChatMessagePosting>> savedPostingsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(chatMessagePostingRepository).saveAll(savedPostingsCaptor.capture());
+        assertThat(savedPostingsCaptor.getValue()).hasSize(1);
     }
 
     @Test
@@ -145,6 +243,9 @@ class ChatbotServiceTest {
         ChatMessageResponse response = chatbotService.sendMessage(1L, 10L, request);
 
         assertThat(response.message()).isEqualTo("관련 공고를 찾지 못했습니다.");
+        // RAG 결과가 없으면 카드도 빈 배열이어야 한다(고정 카테고리 조회 등으로 대체되면 안 됨).
+        assertThat(response.postings()).isEmpty();
+        verify(postingRepository, never()).getReferenceById(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -344,6 +445,44 @@ class ChatbotServiceTest {
         List<ChatMessageResponse> messages = chatbotService.getMessages(1L, 10L);
 
         assertThat(messages).isEmpty();
+    }
+
+    @Test
+    void getMessages는_이전에_저장된_ChatMessagePosting을_통해_그때와_동일한_카드_목록을_복원한다() {
+        ChatMessage assistantMessage = ChatMessage.builder()
+                .chatSession(chatSession).role(ChatRole.ASSISTANT).message("추천 답변").build();
+        setId(assistantMessage, 100L);
+
+        Code categoryCode = mock(Code.class);
+        when(categoryCode.getCode()).thenReturn("CONTEST");
+        Posting posting = mock(Posting.class);
+        when(posting.getId()).thenReturn(202L);
+        when(posting.getTitle()).thenReturn("탄소중립 아이디어 공모전");
+        when(posting.getCompany()).thenReturn("환경부");
+        when(posting.getCategoryCode()).thenReturn(categoryCode);
+        when(posting.getEndDate()).thenReturn(java.time.LocalDate.of(2026, 10, 1));
+        when(posting.getHomepageUrl()).thenReturn("https://example.com/202");
+
+        ChatMessagePosting chatMessagePosting = ChatMessagePosting.builder()
+                .chatMessage(assistantMessage).posting(posting).displayOrder(0).build();
+
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+        when(chatMessageRepository.findByChatSessionIdOrderByCreatedAtAscIdAsc(10L))
+                .thenReturn(List.of(assistantMessage));
+        when(chatMessagePostingRepository.findByChatSessionIdOrderByChatMessageIdAscDisplayOrderAsc(10L))
+                .thenReturn(List.of(chatMessagePosting));
+
+        List<ChatMessageResponse> messages = chatbotService.getMessages(1L, 10L);
+
+        assertThat(messages).hasSize(1);
+        assertThat(messages.get(0).postings()).hasSize(1);
+        PostingCardResponse card = messages.get(0).postings().get(0);
+        assertThat(card.postingId()).isEqualTo(202L);
+        assertThat(card.title()).isEqualTo("탄소중립 아이디어 공모전");
+        assertThat(card.organization()).isEqualTo("환경부");
+        assertThat(card.categoryCode()).isEqualTo("CONTEST");
+        assertThat(card.deadline()).isEqualTo(java.time.LocalDate.of(2026, 10, 1));
+        assertThat(card.link()).isEqualTo("https://example.com/202");
     }
 
     @Test

@@ -61,10 +61,12 @@ public interface PostingRepository extends JpaRepository<Posting, Long>, JpaSpec
     // homepage_url이 NULL인 정상 공고(예: SEED 소스는 원문 URL이 없음)까지 걸리지 않도록 NULL은 통과시킨다.
     @Query(value = """
             SELECT p.id AS id, p.title AS title, p.content AS content,
-                   c.code AS categoryCode, p.homepage_url AS sourceUrl,
+                   c.code AS categoryCode, p.company AS company, rc.code AS regionCode,
+                   p.end_date AS endDate, p.homepage_url AS sourceUrl,
                    (p.embedding <=> CAST(:queryVector AS vector)) AS distance
             FROM postings p
             JOIN common_codes c ON c.id = p.category_code_id
+            LEFT JOIN common_codes rc ON rc.id = p.region_code_id
             WHERE p.embedding IS NOT NULL
               AND (p.homepage_url IS NULL OR p.homepage_url NOT LIKE '%example.com%')
             ORDER BY distance ASC
@@ -77,10 +79,12 @@ public interface PostingRepository extends JpaRepository<Posting, Long>, JpaSpec
     // 질문에서 카테고리가 명확히 감지된 경우, 해당 카테고리로 한정해 검색한다(엉뚱한 카테고리 추천 방지).
     @Query(value = """
             SELECT p.id AS id, p.title AS title, p.content AS content,
-                   c.code AS categoryCode, p.homepage_url AS sourceUrl,
+                   c.code AS categoryCode, p.company AS company, rc.code AS regionCode,
+                   p.end_date AS endDate, p.homepage_url AS sourceUrl,
                    (p.embedding <=> CAST(:queryVector AS vector)) AS distance
             FROM postings p
             JOIN common_codes c ON c.id = p.category_code_id
+            LEFT JOIN common_codes rc ON rc.id = p.region_code_id
             WHERE p.embedding IS NOT NULL
               AND (p.homepage_url IS NULL OR p.homepage_url NOT LIKE '%example.com%')
               AND c.code = :categoryCode

@@ -59,6 +59,10 @@ public class Posting extends BaseTimeEntity {
 
     private LocalDate endDate;
 
+    // 원서접수 시작일 등 공고의 시작일 개념. Q-Net(원서접수 시작일) 도입 전에는 어떤 소스도 이 값을
+    // 채우지 않아 컬럼 자체가 없었다(캘린더 START 집계는 그 시절 createdAt으로 임시 대체했었다).
+    private LocalDate startDate;
+
     private String enterpriseType;
 
     private String employmentType;
@@ -110,7 +114,7 @@ public class Posting extends BaseTimeEntity {
 
     @Builder
     private Posting(Code categoryCode, Code regionCode, String title, String company, String content,
-                     LocalDate endDate, String homepageUrl, String qualification,
+                     LocalDate endDate, LocalDate startDate, String homepageUrl, String qualification,
                      String sourceType, String externalId, String contentHash, PostingStatus status) {
         this.categoryCode = categoryCode;
         this.regionCode = regionCode;
@@ -118,6 +122,7 @@ public class Posting extends BaseTimeEntity {
         this.company = company;
         this.content = content;
         this.endDate = endDate;
+        this.startDate = startDate;
         this.homepageUrl = homepageUrl;
         this.qualification = qualification;
         this.viewCount = 0L;
@@ -130,14 +135,15 @@ public class Posting extends BaseTimeEntity {
 
     // 외부 수집 공고의 변경된 필드를 갱신한다. 영속 상태의 엔티티에 호출해야 dirty checking으로 반영된다.
     public void updateFrom(Code categoryCode, Code regionCode, String title, String company, String content,
-                            LocalDate endDate, String homepageUrl, String qualification, String contentHash,
-                            PostingStatus status) {
+                            LocalDate endDate, LocalDate startDate, String homepageUrl, String qualification,
+                            String contentHash, PostingStatus status) {
         this.categoryCode = categoryCode;
         this.regionCode = regionCode;
         this.title = title;
         this.company = company;
         this.content = content;
         this.endDate = endDate;
+        this.startDate = startDate;
         this.homepageUrl = homepageUrl;
         this.qualification = qualification;
         this.contentHash = contentHash;

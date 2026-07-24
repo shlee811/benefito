@@ -38,11 +38,11 @@ class QNetClientTest {
     }
 
     @Test
-    void 종목_목록_실제_응답_형식대로_jmcd와_jmfldnm을_파싱한다() {
+    void 종목_목록_실제_응답_형식대로_jmcd_jmfldnm_qualgbcd를_파싱한다() {
         mockServer.expect(requestTo(Matchers.startsWith(BASE_URL + "/InquiryListNationalQualifcationSVC/getList")))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(queryParam("serviceKey", "test-service-key"))
-                .andExpect(queryParam("numOfRows", "700"))
+                .andExpect(queryParam("numOfRows", "5000"))
                 .andExpect(queryParam("pageNo", "1"))
                 .andRespond(withSuccess("""
                         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -50,18 +50,20 @@ class QNetClientTest {
                           <header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header>
                           <body>
                             <items>
-                              <item><jmcd>1320</jmcd><jmfldnm>정보처리기사</jmfldnm></item>
-                              <item><jmcd>0752</jmcd><jmfldnm>가스기술사</jmfldnm></item>
+                              <item><jmcd>1320</jmcd><jmfldnm>정보처리기사</jmfldnm><qualgbcd>T</qualgbcd></item>
+                              <item><jmcd>5210</jmcd><jmfldnm>공인노무사</jmfldnm><qualgbcd>S</qualgbcd></item>
                             </items>
                           </body>
                         </response>
                         """, MediaType.APPLICATION_XML));
 
-        QNetQualificationListResponse response = client.fetchQualificationList(700, 1);
+        QNetQualificationListResponse response = client.fetchQualificationList(5000, 1);
 
         assertThat(response.body().getItems()).hasSize(2);
         assertThat(response.body().getItems().get(0).jmcd()).isEqualTo("1320");
         assertThat(response.body().getItems().get(0).jmfldnm()).isEqualTo("정보처리기사");
+        assertThat(response.body().getItems().get(0).qualgbcd()).isEqualTo("T");
+        assertThat(response.body().getItems().get(1).qualgbcd()).isEqualTo("S");
         mockServer.verify();
     }
 

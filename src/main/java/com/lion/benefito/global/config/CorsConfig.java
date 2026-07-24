@@ -39,6 +39,9 @@ public class CorsConfig implements WebMvcConfigurer {
         // 허용 헤더 설정
         configuration.setAllowedHeaders(Collections.singletonList("*"));
 
+        // 프론트엔드가 응답 헤더에서 토큰을 읽을 수 있도록 노출
+        configuration.setExposedHeaders(Collections.singletonList("Authorization"));
+
         // 쿠키 및 인증 정보(Authorization 헤더 등) 전송 허용
         configuration.setAllowCredentials(true);
 

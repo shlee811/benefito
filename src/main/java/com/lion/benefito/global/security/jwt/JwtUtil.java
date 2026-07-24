@@ -66,12 +66,13 @@ public class JwtUtil {
         log.info("[ JwtUtil ] 토큰에서 UserId 를 추출합니다.");
 
         try {
-            return Jwts.parser()
+            Number idObj = Jwts.parser()
                     .verifyWith(secretKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload()
-                    .get("id", Long.class);
+                    .get("id", Number.class);
+            return idObj != null ? idObj.longValue() : null;
         } catch (Exception e) {
             throw new SecurityException("잘못된 토큰입니다.");
         }

@@ -8,6 +8,7 @@ import com.lion.benefito.infrastructure.external.publicinstitutionjob.PublicInst
 import com.lion.benefito.infrastructure.external.qnet.QNetPostingSource;
 import com.lion.benefito.infrastructure.external.scholarship.ScholarshipPostingSource;
 import com.lion.benefito.infrastructure.external.seed.SeedPostingSource;
+import com.lion.benefito.infrastructure.external.seed.SeedQNetScheduleSource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class ExternalPostingAdminController {
     private final QNetPostingSource qNetPostingSource;
     private final ScholarshipPostingSource scholarshipPostingSource;
     private final SeedPostingSource seedPostingSource;
+    private final SeedQNetScheduleSource seedQNetScheduleSource;
 
     @Operation(summary = "K-Startup 공고 수동 수집", description = "K-Startup 공고를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/kstartup/import")
@@ -68,6 +70,18 @@ public class ExternalPostingAdminController {
     @PostMapping("/api/v1/admin/external-postings/seed/import")
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importSeedPostings() {
         ExternalPostingImportResponse response = externalPostingIngestService.sync("SEED", seedPostingSource);
+        return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "자격증 시험일정 시드 데이터 수동 수집",
+            description = "Q-Net 실시간 수집이 안정화되기 전까지 프론트/챗봇 테스트용으로 제공하는 임시 자격증 시험일정"
+                    + " 시드 데이터를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다. sourceType=SEED_QNET_SCHEDULE로"
+                    + " 실제 QNET 수집 데이터와 분리되어 있어, 나중에 실제 Q-Net 데이터가 안정적으로 쌓이면 이 소스만"
+                    + " 골라 안전하게 삭제할 수 있다.")
+    @PostMapping("/api/v1/admin/external-postings/seed-qnet-schedule/import")
+    public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importSeedQNetSchedulePostings() {
+        ExternalPostingImportResponse response =
+                externalPostingIngestService.sync("SEED_QNET_SCHEDULE", seedQNetScheduleSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 }

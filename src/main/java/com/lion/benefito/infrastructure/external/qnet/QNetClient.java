@@ -54,6 +54,9 @@ public class QNetClient {
                 .build();
     }
 
+    // getList(종목 목록 조회)는 실제로는 numOfRows/pageNo를 무시하고 전체 목록을 그대로 반환한다
+    // (2026-07-24 실제 호출로 확인, totalCount 필드 자체가 없음). numOfRows는 혹시 모를 API 쪽
+    // 페이지 제한에 대비한 안전장치로만 넉넉하게 넘긴다.
     public QNetQualificationListResponse fetchQualificationList(int numOfRows, int pageNo) {
         QNetQualificationListResponse response = execute(uriBuilder -> uriBuilder
                 .path(QUALIFICATION_LIST_PATH)
@@ -66,6 +69,9 @@ public class QNetClient {
         return response;
     }
 
+    // getJMList(종목별 시험일정 조회)는 jmCd가 필수이고, qualgbCd 단독으로는 조회할 수 없다
+    // (2026-07-24 실제 호출로 <items/> 빈 응답 확인). jmCd 하나당 결과가 많지 않아 페이지네이션은
+    // 하지 않는다.
     public QNetScheduleResponse fetchSchedule(String jmCd) {
         QNetScheduleResponse response = execute(uriBuilder -> uriBuilder
                 .path(SCHEDULE_PATH)

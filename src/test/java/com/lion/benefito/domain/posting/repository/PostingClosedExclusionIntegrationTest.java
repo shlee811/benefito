@@ -56,6 +56,10 @@ class PostingClosedExclusionIntegrationTest {
         return codeRepository.findByCodeTypeAndCode(CommonCodeType.REGION, "SEOUL").orElseThrow();
     }
 
+    private Code certificate() {
+        return codeRepository.findByCodeTypeAndCode(CommonCodeType.CATEGORY, "CERTIFICATE").orElseThrow();
+    }
+
     private Posting posting(String externalId, String titleSuffix, PostingStatus status, Code category, Code region) {
         Posting posting = Posting.builder()
                 .categoryCode(category)
@@ -219,5 +223,19 @@ class PostingClosedExclusionIntegrationTest {
         List<String> titles = response.content().stream().map(item -> item.title()).toList();
         assertThat(titles).anyMatch(title -> title.contains("closed-rec-interest-active"));
         assertThat(titles).noneMatch(title -> title.contains("closed-rec-interest-closed"));
+    }
+
+    @Test
+    void CERTIFICATE_카테고리의_특강형_시드_데이터는_CLOSED_전환_후_조회에서_제외된다() {
+        posting("closed-certificate-lecture-active", "정보처리기사 실전 특강", PostingStatus.ACTIVE, certificate(), null);
+        posting("closed-certificate-lecture-closed", "정보처리기사 실전 특강", PostingStatus.CLOSED, certificate(), null);
+
+        PostingSearchCondition condition =
+                new PostingSearchCondition(TITLE_PREFIX, null, "CERTIFICATE", PostingFilter.ALL);
+        List<String> externalIds = postingRepository
+                .findAll(PostingSpecification.search(condition), PageRequest.of(0, 100))
+                .getContent().stream().map(Posting::getExternalId).toList();
+
+        assertThat(externalIds).containsExactly("closed-certificate-lecture-active");
     }
 }

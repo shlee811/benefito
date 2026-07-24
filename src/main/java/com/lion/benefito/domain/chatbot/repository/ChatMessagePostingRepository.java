@@ -27,4 +27,10 @@ public interface ChatMessagePostingRepository extends JpaRepository<ChatMessageP
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM ChatMessagePosting cmp WHERE cmp.chatMessage.id = :messageId")
     void deleteByChatMessageId(@Param("messageId") Long messageId);
+
+    // 세션 전체 삭제 시 그 세션에 속한 모든 메시지의 공고 카드를 한 번에 지운다
+    // (deleteByChatMessageId를 메시지 수만큼 반복 호출하지 않기 위함).
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM ChatMessagePosting cmp WHERE cmp.chatMessage.chatSession.id = :sessionId")
+    void deleteByChatSessionId(@Param("sessionId") Long sessionId);
 }

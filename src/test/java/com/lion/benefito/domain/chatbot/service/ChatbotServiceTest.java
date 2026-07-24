@@ -486,6 +486,48 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void deleteSession은_공고카드_메시지_세션_순으로_세션_단위_배치_삭제한다() {
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+
+        chatbotService.deleteSession(1L, 10L);
+
+        // 메시지/카드 건수와 무관하게 세션 단위 벌크 쿼리 1회씩만 호출되어야 한다
+        // (메시지별로 deleteByChatMessageId를 반복 호출하지 않음).
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(
+                chatMessagePostingRepository, chatMessageRepository, chatSessionRepository);
+        inOrder.verify(chatMessagePostingRepository).deleteByChatSessionId(10L);
+        inOrder.verify(chatMessageRepository).deleteByChatSessionId(10L);
+        inOrder.verify(chatSessionRepository).delete(chatSession);
+
+        verify(chatMessagePostingRepository, never()).deleteByChatMessageId(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void 다른_사용자_소유_세션을_삭제하려하면_접근이_차단된다() {
+        Long otherUserId = 2L;
+        when(chatSessionRepository.findById(10L)).thenReturn(Optional.of(chatSession));
+
+        assertThatThrownBy(() -> chatbotService.deleteSession(otherUserId, 10L))
+                .isInstanceOf(ChatbotException.class)
+                .satisfies(ex -> assertThat(((ChatbotException) ex).getCode())
+                        .isEqualTo(ChatbotErrorCode.SESSION_ACCESS_DENIED));
+
+        verify(chatMessagePostingRepository, never()).deleteByChatSessionId(org.mockito.ArgumentMatchers.any());
+        verify(chatMessageRepository, never()).deleteByChatSessionId(org.mockito.ArgumentMatchers.any());
+        verify(chatSessionRepository, never()).delete(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void 존재하지_않는_세션을_삭제하려하면_SESSION_NOT_FOUND_예외() {
+        when(chatSessionRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatbotService.deleteSession(1L, 999L))
+                .isInstanceOf(ChatbotException.class)
+                .satisfies(ex -> assertThat(((ChatbotException) ex).getCode())
+                        .isEqualTo(ChatbotErrorCode.SESSION_NOT_FOUND));
+    }
+
+    @Test
     void 존재하지_않는_세션에_접근하면_SESSION_NOT_FOUND_예외() {
         when(chatSessionRepository.findById(999L)).thenReturn(Optional.empty());
 

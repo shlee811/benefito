@@ -22,7 +22,7 @@ public class CorsConfig implements WebMvcConfigurer {
         allowedOrigins.add("http://localhost:3000");
         allowedOrigins.add("http://127.0.0.1:8080");
         allowedOrigins.add("http://127.0.0.1:3000");
-
+        allowedOrigins.add("https://benefito-frontend-deployment-eta.vercel.app");
 
         //허용하는 HTTP METHOD 지정
         ArrayList<String> allowedHttpMethods = new ArrayList<>();

@@ -7,6 +7,7 @@ import com.lion.benefito.domain.user.exception.UserErrorCode;
 import com.lion.benefito.domain.user.exception.UserException;
 import com.lion.benefito.domain.user.repository.UserRepository;
 import com.lion.benefito.global.security.userdetails.CustomUserDetails;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -51,5 +52,25 @@ public class CurrentUserProviderImpl implements CurrentUserProvider {
         return userRepository.findByIdAndDeletedAtIsNull(principalUser.getId())
                 .map(User::getId)
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    }
+
+    @Override
+    public Optional<Long> getCurrentUserIdOrEmpty() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty();
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (ANONYMOUS_PRINCIPAL.equals(principal) || !(principal instanceof CustomUserDetails customUserDetails)) {
+            return Optional.empty();
+        }
+
+        User principalUser = customUserDetails.getUser();
+        if (principalUser == null || principalUser.getId() == null) {
+            return Optional.empty();
+        }
+
+        return userRepository.findByIdAndDeletedAtIsNull(principalUser.getId()).map(User::getId);
     }
 }

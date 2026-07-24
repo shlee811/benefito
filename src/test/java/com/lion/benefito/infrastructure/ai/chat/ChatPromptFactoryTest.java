@@ -14,10 +14,10 @@ class ChatPromptFactoryTest {
     @Test
     void 검색결과가_있으면_시스템_사용자_메시지_2개를_반환하고_공고_정보가_포함된다() {
         PostingSimilarityResponse posting1 = new PostingSimilarityResponse(
-                4L, "핀테크 블록체인 개발 인턴십", "스마트컨트랙트 개발 인턴 모집", "INTERN",
+                4L, "핀테크 블록체인 개발 인턴십", "스마트컨트랙트 개발 인턴 모집", "INTERN", "라이언", "SEOUL", null,
                 "https://example.com/rag/4", 0.9);
         PostingSimilarityResponse posting2 = new PostingSimilarityResponse(
-                3L, "반도체 공정 품질관리(QC) 엔지니어 채용", "웨이퍼 검사 및 수율 개선 업무", "JOB",
+                3L, "반도체 공정 품질관리(QC) 엔지니어 채용", "웨이퍼 검사 및 수율 개선 업무", "JOB", "라이언반도체", "SEOUL", null,
                 "https://example.com/rag/3", 0.5);
 
         List<OpenAiChatMessage> messages = chatPromptFactory.createChatMessages(
@@ -69,7 +69,7 @@ class ChatPromptFactoryTest {
     @Test
     void 공고_필드가_null이어도_NPE없이_정보없음으로_처리된다() {
         PostingSimilarityResponse postingWithNulls = new PostingSimilarityResponse(
-                1L, null, null, null, null, 0.1);
+                1L, null, null, null, null, null, null, null, 0.1);
 
         List<OpenAiChatMessage> messages = chatPromptFactory.createChatMessages(
                 "질문", List.of(postingWithNulls));

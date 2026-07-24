@@ -29,6 +29,8 @@ public class SeedPostingSource implements ExternalPostingSource {
     private static final String ACTIVITY_RAW = "ACTIVITY";
     private static final String CONTEST_CATEGORY_CODE = "CONTEST";
     private static final String ACTIVITY_CATEGORY_CODE = "EXTRACURRICULAR";
+    // CSV에 지역 컬럼이 없어 지역 조건은 항상 "전국"으로 채운다.
+    private static final String NATIONWIDE_REGION = "전국";
 
     private final SeedCsvReader seedCsvReader;
 
@@ -73,7 +75,7 @@ public class SeedPostingSource implements ExternalPostingSource {
                 trimToNull(row.organization()),
                 null,
                 categoryCode,
-                null,
+                NATIONWIDE_REGION,
                 buildQualification(row),
                 null,
                 null

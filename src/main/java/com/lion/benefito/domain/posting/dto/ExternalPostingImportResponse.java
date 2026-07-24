@@ -7,6 +7,7 @@ public record ExternalPostingImportResponse(
         int unchangedCount,
         int failedCount,
         int embeddingSuccessCount,
-        int embeddingFailedCount
+        int embeddingFailedCount,
+        int closedCount
 ) {
 }

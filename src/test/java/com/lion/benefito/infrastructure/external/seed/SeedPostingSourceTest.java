@@ -106,6 +106,16 @@ class SeedPostingSourceTest {
     }
 
     @Test
+    void region은_항상_전국으로_채운다() {
+        when(reader.readAll()).thenReturn(List.of(
+                row("공모전A", "재단A", "CONTEST", "대학생", "재학생", "내용", "상금")));
+
+        List<ExternalPostingData> result = source.fetchPostings();
+
+        assertThat(result.get(0).region()).isEqualTo("전국");
+    }
+
+    @Test
     void CSV_로드_자체가_실패하면_빈_리스트를_반환한다() {
         when(reader.readAll()).thenThrow(new RuntimeException("파일을 찾을 수 없음"));
 

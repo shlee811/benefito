@@ -41,8 +41,6 @@ out/
 .vscode/
 
 ### Sensitive config ###
-application.yml
-application.properties
 application-local.yml
 application-local.properties
 application-prod.yml

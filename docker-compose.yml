@@ -1,15 +1,23 @@
 services:
-  benefito-db:
-    image: pgvector/pgvector:pg16
-    container_name: benefito-db
-    environment:
-      POSTGRES_DB: benefito
-      POSTGRES_USER: benefito
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  benefito-backend:
+    image: ${DOCKER_IMAGE_NAME}:latest
+    container_name: benefito-backend
     ports:
-      - "5433:5432"
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - benefito-redis
+    restart: unless-stopped
+
+  benefito-redis:
+    image: redis:7-alpine
+    container_name: benefito-redis
+    ports:
+      - "6379:6379"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - redisdata:/data
+    restart: unless-stopped
 
 volumes:
-  pgdata:
+  redisdata:

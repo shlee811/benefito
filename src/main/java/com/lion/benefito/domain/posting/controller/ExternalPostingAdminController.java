@@ -7,6 +7,8 @@ import com.lion.benefito.infrastructure.external.kstartup.KStartupPostingSource;
 import com.lion.benefito.infrastructure.external.publicinstitutionjob.PublicInstitutionJobPostingSource;
 import com.lion.benefito.infrastructure.external.qnet.QNetPostingSource;
 import com.lion.benefito.infrastructure.external.scholarship.ScholarshipPostingSource;
+import com.lion.benefito.infrastructure.external.seed.RagTestSeedSource;
+import com.lion.benefito.infrastructure.external.seed.SeedInternSource;
 import com.lion.benefito.infrastructure.external.seed.SeedPostingSource;
 import com.lion.benefito.infrastructure.external.seed.SeedQNetScheduleSource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +36,8 @@ public class ExternalPostingAdminController {
     private final ScholarshipPostingSource scholarshipPostingSource;
     private final SeedPostingSource seedPostingSource;
     private final SeedQNetScheduleSource seedQNetScheduleSource;
+    private final SeedInternSource seedInternSource;
+    private final RagTestSeedSource ragTestSeedSource;
 
     @Operation(summary = "K-Startup 공고 수동 수집", description = "K-Startup 공고를 즉시 수집해 저장/갱신하고 임베딩을 재생성한다.")
     @PostMapping("/api/v1/admin/external-postings/kstartup/import")
@@ -82,6 +86,30 @@ public class ExternalPostingAdminController {
     public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importSeedQNetSchedulePostings() {
         ExternalPostingImportResponse response =
                 externalPostingIngestService.sync("SEED_QNET_SCHEDULE", seedQNetScheduleSource);
+        return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "인턴 시드 데이터 수동 수집",
+            description = "INTERN 카테고리를 채우는 자동 수집 소스가 없어(기존 데이터는 example.com 가짜 URL이 붙은 수동"
+                    + " SQL 시드라 RAG 검색에서 전부 제외됨) 만든 임시 인턴십 시드 데이터를 즉시 수집해 저장/갱신하고"
+                    + " 임베딩을 재생성한다. sourceType=SEED_INTERN으로 분리되어 있어 나중에 실제 인턴 채용 소스가"
+                    + " 생기면 이 소스만 골라 안전하게 삭제할 수 있다.")
+    @PostMapping("/api/v1/admin/external-postings/seed-intern/import")
+    public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importSeedInternPostings() {
+        ExternalPostingImportResponse response =
+                externalPostingIngestService.sync("SEED_INTERN", seedInternSource);
+        return ResponseEntity.ok(CustomResponse.onSuccess(response));
+    }
+
+    @Operation(summary = "RAG/추천공고 테스트용 시드 데이터 수동 수집",
+            description = "장학금·자격증·공모전·대외활동·채용·정부지원사업 카테고리의 RAG 임베딩 검색 및 추천공고 기능을"
+                    + " 프론트/성능 테스트할 만큼 실데이터가 부족한 부분을 보강하는 임시 시드 데이터를 즉시 수집해"
+                    + " 저장/갱신하고 임베딩을 재생성한다. sourceType=RAG_TEST_SEED, externalId가 RAG-SEED-로"
+                    + " 시작해 실데이터와 명확히 구분되며, 실데이터가 충분히 쌓이면 이 소스만 골라 안전하게 삭제할 수 있다.")
+    @PostMapping("/api/v1/admin/external-postings/rag-test-seed/import")
+    public ResponseEntity<CustomResponse<ExternalPostingImportResponse>> importRagTestSeedPostings() {
+        ExternalPostingImportResponse response =
+                externalPostingIngestService.sync("RAG_TEST_SEED", ragTestSeedSource);
         return ResponseEntity.ok(CustomResponse.onSuccess(response));
     }
 }
